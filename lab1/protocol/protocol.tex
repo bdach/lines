@@ -1,0 +1,127 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{helvet}
+\usepackage{inconsolata}
+\usepackage{hyperref}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[polish]{babel}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{menukeys}
+
+\renewcommand\familydefault{\sfdefault}
+
+\lstset{basicstyle=\ttfamily,
+  showstringspaces=false,
+  commentstyle=\color{grey},
+  keywordstyle=\color{blue}
+}
+
+\title{Linux w systemach wbudowanych -- Laboratorium 1}
+\author{Bartłomiej Dach}
+
+\newcommand{\centeredmenu}[1]{
+	\begin{center}
+		\menu{#1}
+	\end{center}
+}
+
+\begin{document}
+
+\makeatletter
+\begin{flushright}
+	Warszawa, \@date
+\end{flushright}
+\begin{center}
+	\LARGE{\@title}
+\end{center}
+\vspace{0.25cm}
+Student: \@author
+\makeatother
+
+\section{Treść zadania}
+
+W ciągu pierwszej sesji laboratoryjnej do wykonania zostały wyznaczone następujące czynności:
+
+\begin{enumerate}
+	\item Uruchomienie płytki Raspberry Pi w trybie ratunkowym oraz zapoznanie się z możliwościami tego trybu.
+	\item Przygotowanie obrazu systemu Linux z systemem plików \verb+initramfs+, spełniającym następujące wymagania:
+	\begin{enumerate}
+		\item Raspberry Pi automatycznie łączy się z siecią, pobierając konfigurację za pośrednictwem DHCP.
+			Połączenie jest zestawiane automatycznie w momencie podłączenia kabla sieciowego, oraz automatycznie
+			zrywane w momencie jego odłączenia.
+		\item Nazwa hosta systemu powinna mieć postać \verb+imie_nazwisko+ autora.
+		\item Przy starcie systemu, zegar systemowy powinien być synchronizowany z wybranym serwerem NTP.
+		\item Obraz systemu zawiera interpreter języka Ruby oraz przykładowy pakiet Buildroota, zawierający przykładowy
+			skrypt w Ruby. Skrypt ten powinien być uruchamiany automatycznie przy starcie systemu.
+		\item W systemie powinien obok użytkownika \verb+root+ istnieć jeszcze jeden użytkownik o dowolnej nazwie.
+			Obaj użytkownicy powinni mieć ustalone hasła.
+	\end{enumerate}
+\end{enumerate}
+
+\section{Procedura odtworzenia projektu z załączonego archiwum}
+
+\section{Opis rozwiązania}
+
+\subsection{Czynności wstępne}
+
+Na początku ćwiczenia płytka uruchomiona została w trybie ratunkowym poprzez wciśnięcie dowolnego klawisza w czasie oczekiwania bootloadera \verb+uboot+ oraz wpisanie komendy \verb+run rescue+. Następnie sprawdzono możliwości systemu ratunkowego, w szczególności możliwość skopiowania bądź usunięcia własnego obrazu systemu, oraz możliwość połączenia się przez SSH z komputerami laboratoryjnymi.
+
+Następnie na komputery laboratoryjne pobrany został Buildroot w wersji 2016.11.2. Konfigurację jądra rozpoczęto od załadowania domyślnej konfiguracji dla płytki Raspberry Pi poleceniem
+\begin{lstlisting}[language=bash]
+$ make raspberrypi_defconfig
+\end{lstlisting}
+Następnie w celu umożliwienia używania prekompilowanych narzędzi (ang. \emph{toolchain}), wyłączono obsługę sprzętową operacji zmiennoprzecinkowych, zmieniając opcję
+\centeredmenu{Target options > Target ABI}
+z \verb+EABIhf+ na \verb+EABI+. Następnie włączono generowanie systemu plików \verb+initramfs+ poprzez zaznaczenie opcji
+\centeredmenu{Filesystem images > initial RAM filesystem linked into linux kernel}
+Dodatkowo, w celu wykonywania modyfikacji plików konfiguracyjnych i skryptów uruchomieniowych na systemie docelowym, skonfigurowana została nakładka (ang. \emph{overlay}) na system plików, za pomocą opcji
+\centeredmenu{System configuration > Root filesystem overlay directories}
+Podana została ścieżka wskazująca na folder \verb+overlay/+ umieszczony równolegle z katalogiem domowym Buildroota.
+
+\subsection{Automatyczna konfiguracja sieci}
+
+W celu automatycznej konfiguracji interfejsów sieciowych za pośrednictwem DHCP został użyty daemon \verb+ifplugd+. W celu jego instalacji najpierw została dodana jego zależność, oznaczona symbolem \verb+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS+, pozwalająca na wyświetlenie dodatkowych paczek dostarczanych przez \verb+busybox+:
+\centeredmenu{Target packages > BusyBox > Show packages that are also provided by busybox}
+a następnie sam pakiet zawierający \verb+ifplugd+:
+\centeredmenu{Target packages > Networking applications > ifplugd}
+Po dodaniu pakietu, automatycznie dodawany jest również \emph{init script} uruchamiający daemon przy starcie systemu. \verb+ifplugd+ nasłuchuje zmiany w stanie połączenia sieciowego i automatycznie włącza/wyłącza interfejs, używając DHCP do automatycznej konfiguracji adresów sieciowych.
+
+\subsection{Ustawienie nazwy hosta}
+
+Zmiana nazwy hosta skompilowanego systemu została wykonana poprzez modyfikację opcji
+\centeredmenu{System configuration > System hostname}
+i ustawienie jej wartości na ciąg znaków \verb+bartlomiej_dach+.
+
+\subsection{Synchronizacja zegara systemowego}
+
+W celu możliwości synchronizacji zegara systemowego, najpierw wybrane została paczka Buildroota umożliwiające korzystanie z protokołu NTP (ang. \emph{Network Time Protocol}) -- \verb+ntpd+, będący daemonem-klientem NTP:
+\centeredmenu{Target packages > Networking applications > ntp > ntpd}
+Razem z daemonem \verb+ntpd+ dodawany jest \emph{init script} uruchamiający go podczas startu systemu. Aby daemon ten korzystał z polskiej puli serwerów, w nakładce dodany został plik \verb+/etc/ntp.conf+ następującej treści:
+\begin{lstlisting}[caption=Zawartość pliku \texttt{ntp.conf}]
+server 0.pl.pool.ntp.org
+server 1.pl.pool.ntp.org
+server 2.pl.pool.ntp.org
+server 3.pl.pool.ntp.org
+\end{lstlisting}
+
+\subsection{Interpreter języka Ruby oraz własny skrypt jako paczka}
+
+W celu dodania do obrazu interpretera języka skryptowego Ruby dodana została paczka
+\centeredmenu{Target packages > Interpreter languages and scripting > ruby}
+po uprzednim zaznaczeniu wymaganej zależności obsługi ,,szerokich znaków'' (ang. \emph{wchar}, \emph{wide character})
+\centeredmenu{Toolchain > Enable WCHAR support}
+% TODO: Making a package and adding an init script
+
+\subsection{Dodanie użytkownika oraz haseł}
+
+Hasło użytkownika \verb+root+ zostało ustawione za pośrednictwem opcji
+\centeredmenu{System configuration > Root password}
+Dodawanie innych użytkowników w środowisku Buildroot odbywa się za pomocą tzw. tablic użytkowniów (ang. \emph{users tables}). Ścieżkę do pliku tekstowego zawierającego taką tablicę można ustawić w opcji
+\centeredmenu{System configuration > Path to the users tables}
+% TODO: contents and syntax of the users tables
+
+\end{document}
