@@ -1,0 +1,11 @@
+config BR2_PACKAGE_MYRUBYSCRIPT
+	bool "myrubyscript"
+	depends on BR2_PACKAGE_RUBY
+	help
+	  Example Ruby script added to Buildroot
+	  for exercise purposes.
+
+	  https://www.ruby-lang.org/
+
+comment "myrubyscript needs ruby"
+	depends on !BR2_PACKAGE_RUBY

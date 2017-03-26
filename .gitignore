@@ -4,3 +4,8 @@
 *.log
 *.out
 *.pdf
+
+# vim garbage
+
+*.swp
+*.*~
