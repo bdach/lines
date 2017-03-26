@@ -1,0 +1,10 @@
+--- ../../../buildroot/buildroot-2017.02/package/Config.in	2017-03-26 14:47:36.687490900 +0200
++++ buildroot/package/Config.in	2017-03-26 12:51:41.189473529 +0200
+@@ -816,6 +816,7 @@
+ endmenu
+ endif
+ 	source "package/ruby/Config.in"
++	source "package/myrubyscript/Config.in"
+ 	source "package/tcl/Config.in"
+ if BR2_PACKAGE_TCL
+ menu "Tcl libraries/modules"

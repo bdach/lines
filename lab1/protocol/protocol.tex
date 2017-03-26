@@ -66,6 +66,12 @@ W ciągu pierwszej sesji laboratoryjnej do wykonania zostały wyznaczone następ
 
 \section{Procedura odtworzenia projektu z załączonego archiwum}
 
+W załączonym archiwum znajduje się wykonywalny skrypt powłoki o nazwie \verb+install.sh+. Po uruchomieniu go komendą
+\begin{lstlisting}[language=bash]
+$ ./install.sh BR2_ROOT_PATH
+\end{lstlisting}
+gdzie \verb+BR2_ROOT_PATH+ oznacza katalog nadrzędny Buildroota w wersji 2016.11.2, rozpocznie się proces kopiowania odpowiednich plików oraz aplikowania łatek na pliki konfiguracyjne Buildroota, zakończony kompilacją gotowego obrazu, który wystarczy umieścić na płytce.
+
 \section{Opis rozwiązania}
 
 \subsection{Czynności wstępne}
