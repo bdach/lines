@@ -1,3 +1,7 @@
 #!/bin/sh
-hello.rb
+
+case $1 in
+	"start") hello.rb ;;
+	*)
+esac
 exit 0

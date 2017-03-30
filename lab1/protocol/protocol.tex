@@ -174,7 +174,10 @@ Umiejscowienie paczki w menu nie jest zgodne z przyjętymi standardami Buildroot
 Po wykonaniu powyższych czynności pozwala na zainstalowanie paczki w katalogu \verb+/usr/bin+ systemu wynikowego. Jedyne, co pozostało zrobić, to dodanie \emph{init scriptu} uruchamiającego \verb+hello.rb+ do katalogu \verb+/etc/init.d/+ nakładki:
 \begin{lstlisting}[language=bash,caption=Zawartość pliku \texttt{overlay/etc/init.d/S50myrubyscript}]
 #!/bin/sh
-hello.rb
+case $1 in
+	"start") hello.rb ;;
+	*)
+esac
 exit 0
 \end{lstlisting}
 Po dodaniu tego pliku i uruchomieniu skompilowanego obrazu systemu, przed logowaniem pojawia się komunikat \verb+Hello world!+.
