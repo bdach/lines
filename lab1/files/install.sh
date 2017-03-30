@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Check whether pwd is okay
+[ -e install.sh ] || { echo >&2 "Please cd into the script directory before executing."; exit 1; }
+
 # Check input arguments
 if [ $# -ne 1 ]
 then
