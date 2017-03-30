@@ -122,10 +122,13 @@ W celu dodania do obrazu interpretera języka skryptowego Ruby dodana została p
 \centeredmenu{Target packages > Interpreter languages and scripting > ruby}
 po uprzednim zaznaczeniu wymaganej zależności obsługi ,,szerokich znaków'' (ang. \emph{wchar}, \emph{wide character})
 \centeredmenu{Toolchain > Enable WCHAR support}
-Następnie przystąpiono do stworzenia własnej paczki ze skryptem. Plik ze skryptem znajduje się w katalogu \verb+myrubyscript+ i jest wariantem \emph{Hello world} w języku Ruby:
+Następnie przystąpiono do stworzenia własnej paczki ze skryptem. Plik ze skryptem znajduje się w katalogu \verb+myrubyscript+ i wyświetla krótką wiadomość powitalną:
 \begin{lstlisting}[language=ruby, caption=Zawartość skryptu \texttt{hello.rb}]
 #!/usr/bin/ruby
-puts 'Hello world!'
+
+puts 'Welcome to LINSW!'
+time = Time.new
+puts 'Current time: ' + time.inspect
 \end{lstlisting}
 W katalogu \verb+package+ Buildroota utworzony został nowy folder dla tworzonej paczki o nazwie \verb+myrubyscript+. W tym folderze dodane zostały dwa pliki konfiguracyjne: \verb+Config.in+ określający nazwę dodawanej opcji konfiguracyjnej kompilowanego jądra i szczegóły paczki, oraz \verb+myrubyscript.mk+ określający sposób instalacji paczki na kompilowanym jądrze.
 \begin{lstlisting}[caption=Zawartość pliku \texttt{Config.in}]

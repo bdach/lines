@@ -1,3 +1,5 @@
 #!/usr/bin/ruby
 
-puts 'Hello world!'
+puts 'Welcome to LINSW!'
+time = Time.new
+puts 'Current time: ' + time.inspect
