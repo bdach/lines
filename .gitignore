@@ -9,3 +9,7 @@
 
 *.swp
 *~
+
+# tarballs
+
+*.tar.gz

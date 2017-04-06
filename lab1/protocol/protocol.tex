@@ -4,7 +4,7 @@
 \usepackage{graphicx}
 \usepackage{tabularx}
 \usepackage{helvet}
-\usepackage{inconsolata}
+\usepackage{bera}
 \usepackage{hyperref}
 \usepackage[a4paper,margin=1in]{geometry}
 \usepackage[polish]{babel}
@@ -56,23 +56,24 @@ W ciągu pierwszej sesji laboratoryjnej do wykonania zostały wyznaczone następ
 			Połączenie jest zestawiane automatycznie w momencie podłączenia kabla sieciowego, oraz automatycznie
 			zrywane w momencie jego odłączenia.
 		\item Nazwa hosta systemu powinna mieć postać \verb+imie_nazwisko+ autora.
-		\item Przy starcie systemu, zegar systemowy powinien być synchronizowany z wybranym serwerem NTP.
-		\item Obraz systemu zawiera interpreter języka Ruby oraz przykładowy pakiet Buildroota, zawierający przykładowy
+		\item Przy starcie systemu lub w momencie nawiązania połączenia sieciowego, zegar systemowy powinien być 
+			synchronizowany z wybranym serwerem NTP (lub najlepiej z pulą serwerów NTP).
+		\item Obraz systemu zawiera interpreter języka Ruby oraz samodzielnie stworzony pakiet Buildroota, zawierający przykładowy
 			skrypt w Ruby. Skrypt ten powinien być uruchamiany automatycznie przy starcie systemu.
 		\item W systemie powinien obok użytkownika \verb+root+ istnieć jeszcze jeden użytkownik o dowolnej nazwie.
 			Obaj użytkownicy powinni mieć ustalone hasła.
 	\end{enumerate}
 \end{enumerate}
 
-Dodatkowo podczas drugiej sesji laboratoryjnej dodany skrypt w Ruby został poszerzony o możliwość wysyłania co 10 sekund pakietów UDP z obecną datą i godziną na maszynę laboratoryjną.
+Dodatkowo podczas drugiej sesji laboratoryjnej dodany skrypt w Ruby został poszerzony o możliwość wysyłania co 10 sekund pakietów UDP z obecną datą i godziną na komputer laboratoryjny.
 
 \section{Procedura odtworzenia projektu z załączonego archiwum}
 
-W załączonym archiwum znajduje się wykonywalny skrypt powłoki o nazwie \verb+install.sh+. Po uruchomieniu go komendą
+W załączonym archiwum znajduje się wykonywalny skrypt powłoki o nazwie \verb+install.sh+. Po wypakowaniu archiwum i uruchomieniu skryptu z wypakowanego folderu komendą
 \begin{lstlisting}[language=bash]
 $ ./install.sh BR2_ROOT_PATH
 \end{lstlisting}
-gdzie \verb+BR2_ROOT_PATH+ oznacza katalog nadrzędny Buildroota w wersji 2016.11.2, rozpocznie się proces kopiowania odpowiednich plików oraz aplikowania łatek na pliki konfiguracyjne Buildroota, zakończony kompilacją gotowego obrazu, który wystarczy umieścić na płytce.
+gdzie \verb+BR2_ROOT_PATH+ oznacza katalog główny Buildroota w wersji 2016.11.2, rozpocznie się proces kopiowania odpowiednich plików oraz stosowanie łatek plików konfiguracyjnych Buildroota, a następnie kompilacji obrazu.
 
 \section{Opis rozwiązania}
 
@@ -84,6 +85,10 @@ Następnie na komputery laboratoryjne pobrany został Buildroot w wersji 2016.11
 \begin{lstlisting}[language=bash]
 $ make raspberrypi_defconfig
 \end{lstlisting}
+Aby umożliwić komunikację z komputerem laboratoryjnym poprzez konwerter USB-UART, ustawiono nazwę portu dla getty na \verb+ttyAMA0+ w opcji
+\centeredmenu{System configuration > Run a getty... > TTY port}
+W celu zapobiegnięcia niepotrzebnego ściągania źródeł z Internetu, zmieniono także główną lokalizację pobierania na \verb+http://192.168.137.24/dl+ w opcji
+\centeredmenu{Build options > Mirrors and Download locations > Primary download site}
 Następnie w celu umożliwienia używania prekompilowanych narzędzi (ang. \emph{toolchain}), wyłączono obsługę sprzętową operacji zmiennoprzecinkowych, zmieniając opcję
 \centeredmenu{Target options > Target ABI}
 z \verb+EABIhf+ na \verb+EABI+. Następnie włączono generowanie systemu plików \verb+initramfs+ poprzez zaznaczenie opcji
@@ -94,7 +99,7 @@ Podana została ścieżka wskazująca na folder \verb+overlay/+ umieszczony ró
 
 \subsection{Automatyczna konfiguracja sieci}
 
-W celu automatycznej konfiguracji interfejsów sieciowych za pośrednictwem DHCP został użyty daemon \verb+ifplugd+. W celu jego instalacji najpierw została dodana jego zależność, oznaczona symbolem \verb+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS+, pozwalająca na wyświetlenie dodatkowych paczek dostarczanych przez \verb+busybox+:
+W celu automatycznej konfiguracji interfejsów sieciowych za pośrednictwem DHCP został użyty daemon \verb+ifplugd+. W celu jego instalacji najpierw została dodana jego zależność, oznaczona symbolem \verb+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS+, pozwalająca na wyświetlenie dodatkowych paczek, których alternatywy znajdują się w programie \verb+busybox+:
 \centeredmenu{Target packages > BusyBox > Show packages that are also provided by busybox}
 a następnie sam pakiet zawierający \verb+ifplugd+:
 \centeredmenu{Target packages > Networking applications > ifplugd}
@@ -108,7 +113,7 @@ i ustawienie jej wartości na ciąg znaków \verb+bartlomiej_dach+.
 
 \subsection{Synchronizacja zegara systemowego}
 
-W celu możliwości synchronizacji zegara systemowego, najpierw wybrane została paczka Buildroota umożliwiające korzystanie z protokołu NTP (ang. \emph{Network Time Protocol}) -- \verb+ntpd+, będący daemonem-klientem NTP:
+W celu możliwości synchronizacji zegara systemowego, najpierw wybrane została paczka Buildroota umożliwiająca korzystanie z protokołu NTP (ang. \emph{Network Time Protocol}) -- \verb+ntpd+, będący daemonem-klientem NTP:
 \centeredmenu{Target packages > Networking applications > ntp > ntpd}
 Razem z daemonem \verb+ntpd+ dodawany jest \emph{init script} uruchamiający go podczas startu systemu. Aby daemon ten korzystał z polskiej puli serwerów, w nakładce dodany został plik \verb+/etc/ntp.conf+ następującej treści:
 \begin{lstlisting}[caption=Zawartość pliku \texttt{ntp.conf}]
@@ -117,7 +122,7 @@ server 1.pl.pool.ntp.org
 server 2.pl.pool.ntp.org
 server 3.pl.pool.ntp.org
 \end{lstlisting}
-Dodatkowo, \emph{init script} został zmodyfikowany tak, aby daemon \verb+ntpd+ skanował zmiany na interfejsach co 5 sekund, poprzez dodanie opcji \verb+-U5+:
+Dodatkowo, \emph{init script} został zmodyfikowany tak, aby daemon \verb+ntpd+ skanował zmiany na interfejsach co 5 sekund, poprzez dodanie opcji \verb+-U5+ przy uruchamianu:
 \begin{lstlisting}[language=bash,caption=Zawartość zmodyfikowanego pliku \texttt{S49ntpd}]
 #! /bin/sh
 
@@ -163,7 +168,7 @@ exit 0
 
 W celu dodania do obrazu interpretera języka skryptowego Ruby dodana została paczka
 \centeredmenu{Target packages > Interpreter languages and scripting > ruby}
-po uprzednim zaznaczeniu wymaganej zależności obsługi ,,szerokich znaków'' (ang. \emph{wchar}, \emph{wide character})
+po uprzednim zaznaczeniu wymaganej zależności -- obsługi ,,szerokich znaków'' (ang. \emph{wchar}, \emph{wide character})
 \centeredmenu{Toolchain > Enable WCHAR support}
 Następnie przystąpiono do stworzenia własnej paczki ze skryptem. Plik ze skryptem znajduje się w katalogu \verb+myrubyscript+ i wyświetla krótką wiadomość powitalną przy starcie, a następnie wysyła przez UDP co 10 sekund datę i czas systemowy na podłączony komputer laboratoryjny:
 \begin{lstlisting}[language=ruby, caption=Zawartość skryptu \texttt{hello.rb}]
@@ -227,7 +232,7 @@ Aby dodana paczka pojawiła się w menu konfiguracyjnym jądra, edytowany zostal
 \end{lstlisting}
 Umiejscowienie paczki w menu nie jest zgodne z przyjętymi standardami Buildroota, lecz dla skrócenia czasu konfiguracji i ułatwienia znalezienia dodanej paczki zastosowane zostało powyższe przejściowe rozwiązanie.
 
-Po wykonaniu powyższych czynności pozwala na zainstalowanie paczki w katalogu \verb+/usr/bin+ systemu wynikowego. Jedyne, co pozostało zrobić, to dodanie \emph{init scriptu} uruchamiającego \verb+hello.rb+ w tle do katalogu \verb+/etc/init.d/+ nakładki:
+Wykonanie powyższych czynności pozwala na zainstalowanie paczki w katalogu \verb+/usr/bin+ systemu wynikowego. Jedyne, co pozostało zrobić, to dodanie \emph{init scriptu} uruchamiającego \verb+hello.rb+ w tle do katalogu \verb+/etc/init.d/+ nakładki:
 \begin{lstlisting}[language=bash,caption=Zawartość pliku \texttt{overlay/etc/init.d/S50myrubyscript}]
 #!/bin/sh
 case $1 in
