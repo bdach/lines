@@ -1,0 +1,10 @@
+--- ../../../buildroot/buildroot-2016.11.2/package/Config.in	2017-01-25 09:27:44.000000000 +0100
++++ package/Config.in	2017-04-08 18:28:51.390436814 +0200
+@@ -223,6 +223,7 @@
+ 	source "package/opentyrian-data/Config.in"
+ 	source "package/prboom/Config.in"
+ 	source "package/rubix/Config.in"
++	source "package/simon/Config.in"
+ 	source "package/sl/Config.in"
+ 	source "package/stella/Config.in"
+ 	source "package/supertuxkart/Config.in"
