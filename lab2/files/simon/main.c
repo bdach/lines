@@ -45,7 +45,7 @@ int main(void)
 	setup_leds(ledfds, ledpins);
 	setup_switches(switchfds, switchpins);
 	generate_sequence(sequence, MAX_SEQ_LEN);
-	for (unsigned i = 1; i < MAX_SEQ_LEN; ++i) {
+	for (unsigned i = 1; i <= MAX_SEQ_LEN; ++i) {
 		display_sequence(sequence, i, ledfds);
 		read_sequence(sequence, i, switchfds, switchpins, ledfds, ledpins);
 	}

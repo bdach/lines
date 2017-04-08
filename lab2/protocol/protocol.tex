@@ -1,0 +1,137 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{helvet}
+\usepackage{bera}
+\usepackage{hyperref}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[polish]{babel}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{menukeys}
+
+\renewcommand\familydefault{\sfdefault}
+
+\lstset{basicstyle=\ttfamily,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  stringstyle=\color{teal},
+  captionpos=b
+}
+
+\title{Linux w systemach wbudowanych -- Laboratorium 2}
+\author{Bartłomiej Dach}
+
+\newcommand{\centeredmenu}[1]{
+	\begin{center}
+		\menu{#1}
+	\end{center}
+}
+
+\begin{document}
+
+\makeatletter
+\begin{flushright}
+	Warszawa, \@date
+\end{flushright}
+\begin{center}
+	\LARGE{\@title}
+\end{center}
+\vspace{0.25cm}
+Student: \@author
+\makeatother
+
+\section{Treść zadania}
+
+Celem drugiego ćwiczenia było przygotowanie aplikacji w języku C, obsługującą dostarczoną płytkę z przyciskami oraz diodami LED za pośrednictwem interfejsu GPIO (ang. \emph{General-Purpose Input/Output}). Aplikacja ta miała reagować na zmiany stanu przycisków za pomocą przerwań (bez czekania aktywnego).
+
+Stworzona aplikacja to klon gry elektronicznej \emph{Simon}. W tej grze, w kolejnych rundach pokazywane są coraz dłuższe sekwencje sygnałów świetlnych. Celem gracza jest bezbłędne powtórzenie danych sekwencji, wciskając odpowiednie przyciski. Dla prostoty w aplikacji ustalono limit długości tych sekwencji na 20.
+
+Poza utworzeniem aplikacji, w skład ćwiczenia laboratoryjnego wchodziło utworzenie pakietu Buildroota zawierającego ją, oraz przetestowanie zdalnego debugowania aplikacji za pomocą \verb+gdbserver+.
+
+\section{Procedura odtworzenia projektu z załączonego archiwum}
+
+W załączonym archiwum znajduje się wykonywalny skrypt powłoki o nazwie \verb+install.sh+. Po wypakowaniu archiwum i uruchomieniu skryptu z wypakowanego folderu komendą
+\begin{lstlisting}[language=bash]
+$ ./install.sh BR2_ROOT_PATH
+\end{lstlisting}
+gdzie \verb+BR2_ROOT_PATH+ oznacza katalog główny Buildroota w wersji 2016.11.2, rozpocznie się proces kopiowania odpowiednich plików oraz stosowanie łatek plików konfiguracyjnych Buildroota, a następnie kompilacji obrazu.
+
+\section{Opis rozwiązania}
+
+\subsection{Aplikacja \texttt{simon}}
+
+Źródło aplikacji znajduje się w folderze \verb+simon+ w załączonym archiwum. Jest to program w C, używający do obsługi pinów GPIO wbudowany w system Linux interfejs \verb+sysfs+. Użycie go sprowadza się do wykonywania operacji na plikach specjalnych udostępnionych przez sterowniki jądra.
+
+Stworzony program jest dość nieskomplikowany w swoim działaniu. Na początku, funkcje \verb+setup_leds+ i \verb+setup_switches+ wpisują do pliku \verb+/sys/class/gpio/export+ numery pinów odpowiadające diodom LED oraz przyciskom na dostarczonej płytce, co powoduje pojawienie się katalogów o nazwie \verb+/sys/class/gio/exportNN+, gdzie \verb+NN+ to numer pinu.
+
+Po wyeksportowaniu pinów są one odpowiednio konfigurowane:
+\begin{itemize}
+	\item W przypadku diod LED kierunek (\verb+direction+) ustalany jest na \verb+out+ -- piny te stanowią wyjście. Pozwala to na dokonywanie zapisów do pliku \verb+value+.
+	\item Dla przycisków kierunek ustalany jest na \verb+in+. Dodatkowo, aby można było użyć funkcji \verb+poll+ do obsługi przerwań, do pliku \verb+edge+ wpisywana jest wartość \verb+both+.
+\end{itemize}
+
+Później losowana jest sekwencja, która będzie pokazywana użytkownikowi. W pętli następuje naprzemienne pokazywanie podciągu wylosowanej sekwencji i wczytywania wejścia z przycisków; długość podciągu zwiększa się o 1 w każdej iteracji pętli.
+
+Najbardziej skomplikowaną częścią programu jest detekcja wciśnięć przycisków. Jest to spowodowane koniecznością wykonania \emph{debouncingu} -- wyeliminowania drgań sygnału tuż po wciśnięciu lub puszczeniu przycisku.
+
+W tym celu wykonywane są dwa wywołania funkcji \verb+poll+. Pierwsze wywołanie blokuje program do momentu wykrycia pierwszej zmiany stanu jednego z deskryptorów związanych z przyciskami. Po odblokowaniu programu, wykonywane jest drugie wywołanie -- tym razem z \emph{time-out}em ustawionym na ok. 100 ms.
+
+\begin{itemize}
+	\item Jeśli \verb+poll+ zwróci liczbę dodatnią, znaczy to, że przed upłynięciem 100 ms nastąpiła następna zmiana stanu przycisku; obydwa zdarzenia zmiany sygnału są wówczas ignorowane.
+	\item Jeśli zmiana nie nastąpiła (zwrócone zostało 0), oznacza, że stan wejść ustalił się i można bezpiecznie wczytać stan wyprowadzeń.
+\end{itemize}
+
+Z przyczyn technicznych między wywołaniami funkcji \verb+poll+ następuje przesunięcie się na początek pliku funkcją \verb+lseek+ oraz wczytanie wartości, aby drugie wywołanie nie skończyło się natychmiast po pierwszym.
+
+\subsection{Pakiet Buildroota}
+
+Przygotowanie pakietu Buildroota przebiegało bardzo podobnie jak w przypadku skryptu Ruby w poprzednim ćwiczeniu. Dodany został katalog \verb+package/simon+ z plikami \verb+Config.in+ oraz \verb+simon.mk+, oraz wpis do pliku \verb+package/Config.in+ wskazujący na nową paczkę. Plik \verb+.mk+ został poszerzony o komendę, która odpowiada za zbudowanie pliku wykonywalnego ze źródeł:
+\begin{lstlisting}[language=bash]
+define SIMON_BUILD_CMDS
+   $(MAKE) $(TARGET_CONFIGURE_OPTS) CFLAGS="$(CFLAGS) -std=gnu99" simon -C $(@D)
+endef
+\end{lstlisting}
+W celu umożliwienia korzystania z flagi \verb+-std=gnu99+, po ustawieniu opcji poprzez zmienną \\ 
+\verb+TARGET_CONFIGURE_OPTS+ zostaje ona dołączona do zmiennej środowiskowej \verb+CFLAGS+.
+
+\subsection{Przygotowanie obrazu}
+
+Po przygotowaniu pakietu, skompilowany został obraz systemu, z następującymi standardowymi opcjami:
+
+\begin{itemize}
+	\item port \verb+getty+ został ustawiony na \verb+ttyAMA0+,
+	\item główna lokalizacja pobierania została ustawiona na serwer lustrzany w sieci lokalnej o adresie \verb+http://192.168.137.24/dl+,
+	\item wyłączone zostało wsparcie dla akceleracji operacji zmiennoprzecinkowych,
+	\item użyty został zewnętrzny \emph{toolchain} Sourcery CodeBench ARM 2014.05,
+	\item obraz systemu został skompilowany z systemem plików \verb+initramfs+ oraz skompresowany za pomocą gzip.
+\end{itemize}
+Ponadto do systemu została dodana aplikacja \verb+simon+, poprzez wybranie opcji
+\centeredmenu{Target packages > Games > simon}
+Aby umożliwić wykonanie zdalnego debugowania poprzez \verb+gdb+, wybrane zostały również opcje
+\centeredmenu{Target packages > Debugging, profiling and benchmark > gdb}
+Po wybraniu tej opcji, automatycznie zaznaczana jest opcja \verb+gdbserver+.
+
+Aby komputer-host mógł połączyć się ze zdalnym serwerem, należy włączyć budowanie kompatybilnej z nim wersji \verb+gdb+ opcją
+\centeredmenu{Toolchain > Build cross gdb for the host}
+Wreszcie, aby aplikacje budowane w procesie tworzenia obrazu mogły być debugowane, należy włączyć opcję dodawania symboli
+\centeredmenu{Build options > build packages with debugging symbols}
+
+\subsection{Zdalne debugowanie za pomocą \texttt{gdbserver}}
+
+Po wykonaniu obrazu, skopiowaniu go na kartę SD i zrestartowaniu płytki przystąpiono do włączenia zdalnego debugowania. Najpierw, na płytce została uruchomiona instancja serwera komendą
+\begin{lstlisting}
+# gdbserver host:7777 simon
+\end{lstlisting}
+zaś na stacji roboczej połączono się z serwerem komendami
+\begin{lstlisting}
+$ /malina/dachb/buildroot-2016.11.2/output/host/usr/bin/arm-none-linux-gnueabi-gdb \ 
+  /malina/dachb/simon/simon
+(gdb) target remote 192.168.143.xxx:7777
+\end{lstlisting}
+W wyniku powyższych czynności można debugować kod wykonywany na płytce z poziomu komputera laboratoryjnego, m.in. przechodząc po kolejnych instrukcjach lub ustawiając \emph{breakpoint}.
+
+\end{document}
