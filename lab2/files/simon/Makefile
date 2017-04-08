@@ -1,10 +1,10 @@
 CC=$(CROSS_COMPILE)gcc
 CFLAGS=-Wall --pedantic --std=gnu99
 
-main:
-	$(CC) ${CFLAGS} main.c -o main
+simon:
+	$(CC) ${CFLAGS} main.c -o simon
 
 .PHONY: clean
 
 clean:
-	-rm main
+	-rm simon

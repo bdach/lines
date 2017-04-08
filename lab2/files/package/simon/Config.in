@@ -1,0 +1,8 @@
+config BR2_PACKAGE_SIMON
+	bool "simon"
+	help
+	  A simpler version of the electronic game
+	  Simon, using LEDs and microswitches connected
+	  via GPIO.
+
+	  https://github.com/bdach
