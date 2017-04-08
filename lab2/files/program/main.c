@@ -27,10 +27,12 @@
 
 void generate_sequence(char *buf, unsigned length);
 void display_sequence(char *seq, unsigned length, int *ledfds);
-int read_sequence(char *seq, unsigned length, int *switchfds);
+void read_sequence(char *seq, unsigned length, int *switchfds, int *switchpins, int *ledfds, int *ledpins);
+int read_button(int *switchfds);
 void setup_leds(int *ledfds, int *pins);
 void setup_switches(int *switchfds, int *pins);
 void cleanup(int *fds, int *pins, unsigned count);
+void lost_game(int *switchfds, int *switchpins, int *ledfds, int *ledpins);
 
 int main(void)
 {
@@ -43,9 +45,10 @@ int main(void)
 	setup_leds(ledfds, ledpins);
 	setup_switches(switchfds, switchpins);
 	generate_sequence(sequence, MAX_SEQ_LEN);
-	display_sequence(sequence, MAX_SEQ_LEN, ledfds);
-	for (unsigned i = 0; i < 5; ++i)
-		while (!read_sequence(sequence, MAX_SEQ_LEN, switchfds)) ;
+	for (unsigned i = 1; i < MAX_SEQ_LEN; ++i) {
+		display_sequence(sequence, i, ledfds);
+		read_sequence(sequence, i, switchfds, switchpins, ledfds, ledpins);
+	}
 	cleanup(ledfds, ledpins, LED_COUNT);
 	cleanup(switchfds, switchpins, SWITCH_COUNT);
 
@@ -74,7 +77,7 @@ void display_sequence(char *seq, unsigned length, int *ledfds)
 
 void setup_leds(int *ledfds, int *pins)
 {
-	const char *export_file = "/sys/class/gpio/export";
+	const char *export_file = "./sys/class/gpio/export";
 
 	int exportfd;
 	if ((exportfd = open(export_file, O_WRONLY)) < 0)
@@ -89,7 +92,7 @@ void setup_leds(int *ledfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < LED_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/direction", pins[i]);
+		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/direction", pins[i]);
 		int directionfd;
 		char *out = "out";
 		if ((directionfd = open(buf, O_WRONLY)) < 0)
@@ -102,7 +105,7 @@ void setup_leds(int *ledfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < LED_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/value", pins[i]);
+		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/value", pins[i]);
 		if ((ledfds[i] = open(buf, O_RDWR)) < 0) {
 			ERR("opening value file failed");
 		}
@@ -112,7 +115,7 @@ void setup_leds(int *ledfds, int *pins)
 
 void cleanup(int *fds, int *pins, unsigned count)
 {
-	const char *unexport_file = "/sys/class/gpio/unexport";
+	const char *unexport_file = "./sys/class/gpio/unexport";
 
 	int unexportfd;
 	if ((unexportfd = open(unexport_file, O_WRONLY)) < 0)
@@ -136,7 +139,7 @@ void cleanup(int *fds, int *pins, unsigned count)
 
 void setup_switches(int *switchfds, int *pins)
 {
-	const char *export_file = "/sys/class/gpio/export";
+	const char *export_file = "./sys/class/gpio/export";
 
 	int exportfd;
 	if ((exportfd = open(export_file, O_WRONLY)) < 0)
@@ -151,7 +154,7 @@ void setup_switches(int *switchfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/direction", pins[i]);
+		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/direction", pins[i]);
 		int directionfd;
 		char *in = "in";
 		if ((directionfd = open(buf, O_WRONLY)) < 0)
@@ -164,9 +167,9 @@ void setup_switches(int *switchfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/edge", pins[i]);
+		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/edge", pins[i]);
 		int directionfd;
-		char *edge = "rising";
+		char *edge = "both";
 		if ((directionfd = open(buf, O_WRONLY)) < 0)
 			ERR("opening edge file failed");
 		if (write(directionfd, edge, strlen(edge)) < 0)
@@ -177,18 +180,43 @@ void setup_switches(int *switchfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/value", pins[i]);
-		if ((switchfds[i] = open(buf, O_RDWR)) < 0) {
+		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/value", pins[i]);
+		if ((switchfds[i] = open(buf, O_RDWR)) < 0)
 			ERR("opening value file failed");
-		}
 	}
 }
 
-int read_sequence(char *seq, unsigned length, int *switchfds)
+void read_sequence(char *seq, 
+		unsigned length, 
+		int *switchfds, 
+		int *switchpins, 
+		int *ledfds, 
+		int *ledpins)
 {
-	char buf[BUF_SIZE];
+	char state;
+	for (unsigned i = 0; i < length; i++) {
+		int pressed;
+		// wait for a press
+		while ((pressed = read_button(switchfds)) < 0) ;
+		state = 1;
+		if (write(ledfds[pressed], &state, sizeof(state)) < 0)
+			ERR("turning on led failed");
+		// wait for release
+		while (read_button(switchfds) > 0) ;
+		state = 0;
+		if (write(ledfds[pressed], &state, sizeof(state)) < 0)
+			ERR("turning off led failed");
+		if (pressed != seq[i])
+			lost_game(switchfds, switchpins, ledfds, ledpins);
+	}
+}
+
+int read_button(int *switchfds)
+{
+	char val;
+	// dummy read and seek before polling
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		if (read(switchfds[i], buf, BUF_SIZE) < 0)
+		if (read(switchfds[i], &val, sizeof(val)) < 0)
 			ERR("cannot read from value file");
 		if (lseek(switchfds[i], 0, SEEK_SET) < 0)
 			ERR("cannot seek to start of file");
@@ -204,29 +232,49 @@ int read_sequence(char *seq, unsigned length, int *switchfds)
 	if (poll(fds, SWITCH_COUNT, -1) < 0)
 		ERR("poll failed");
 
+	// seek to start and read value to reset
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		if (!(fds[i].revents & POLLPRI))
-			continue;
-		if (read(switchfds[i], buf, BUF_SIZE) < 0)
-			ERR("cannot read from value file");
 		if (lseek(switchfds[i], 0, SEEK_SET) < 0)
 			ERR("cannot seek to start of file");
+		if (read(switchfds[i], &val, sizeof(val)) < 0)
+			ERR("cannot read from value file");
 	}
 
 	switch (poll(fds, SWITCH_COUNT, 50)) {
 		case -1:
 			ERR("second poll failed");
 		case 0:
+			// no change since last poll
 			break;
 		default:
-			return 0;
+			// something changed, so ignore
+			return -1;
 	}
 
+	int pressed = -1;
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		if (read(switchfds[i], buf, BUF_SIZE) < 0)
+		if (read(switchfds[i], &val, sizeof(val)) < 0)
 			ERR("cannot read from value file");
-		printf("button %d: %s", i, buf);
+		if (val == '1')
+			pressed = pressed < 0 ? i : -1;
 	}
-	return 1;
+	return pressed;
 }
 
+void lost_game(int *switchfds, int *switchpins, int *ledfds, int *ledpins)
+{
+	int fail_led = ledfds[3];
+	char status;
+	for (unsigned i = 0; i < 3; ++i) {
+		sleep(1);
+		status = 1;
+		if (write(fail_led, &status, sizeof(status)) < 0)
+			ERR("turning on led failed");
+		sleep(1);
+		status = 0;
+		if (write(fail_led, &status, sizeof(status)) < 0)
+			ERR("turning off led failed");
+	}
+	cleanup(ledfds, ledpins, LED_COUNT);
+	cleanup(switchfds, switchpins, SWITCH_COUNT);
+}
