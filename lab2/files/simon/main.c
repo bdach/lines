@@ -77,7 +77,7 @@ void display_sequence(char *seq, unsigned length, int *ledfds)
 
 void setup_leds(int *ledfds, int *pins)
 {
-	const char *export_file = "./sys/class/gpio/export";
+	const char *export_file = "/sys/class/gpio/export";
 
 	int exportfd;
 	if ((exportfd = open(export_file, O_WRONLY)) < 0)
@@ -91,8 +91,11 @@ void setup_leds(int *ledfds, int *pins)
 		printf("Pin %d exported\n", pins[i]);
 	}
 
+	if (close(exportfd) < 0)
+		ERR("closing /sys/class/gpio/export failed");
+
 	for (unsigned i = 0; i < LED_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/direction", pins[i]);
+		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/direction", pins[i]);
 		int directionfd;
 		char *out = "out";
 		if ((directionfd = open(buf, O_WRONLY)) < 0)
@@ -105,7 +108,7 @@ void setup_leds(int *ledfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < LED_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/value", pins[i]);
+		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/value", pins[i]);
 		if ((ledfds[i] = open(buf, O_RDWR)) < 0) {
 			ERR("opening value file failed");
 		}
@@ -115,7 +118,7 @@ void setup_leds(int *ledfds, int *pins)
 
 void cleanup(int *fds, int *pins, unsigned count)
 {
-	const char *unexport_file = "./sys/class/gpio/unexport";
+	const char *unexport_file = "/sys/class/gpio/unexport";
 
 	int unexportfd;
 	if ((unexportfd = open(unexport_file, O_WRONLY)) < 0)
@@ -129,6 +132,9 @@ void cleanup(int *fds, int *pins, unsigned count)
 		printf("closed value file for pin %d\n", pins[i]);
 	}
 
+	if (close(unexportfd) < 0)
+		ERR("closing /sys/class/gpio/unexport failed");
+
 	for (unsigned i = 0; i < count; ++i) {
 		snprintf(buf, BUF_SIZE, "%d", pins[i]);
 		if (write(unexportfd, buf, strlen(buf)) < 0)
@@ -139,7 +145,7 @@ void cleanup(int *fds, int *pins, unsigned count)
 
 void setup_switches(int *switchfds, int *pins)
 {
-	const char *export_file = "./sys/class/gpio/export";
+	const char *export_file = "/sys/class/gpio/export";
 
 	int exportfd;
 	if ((exportfd = open(export_file, O_WRONLY)) < 0)
@@ -153,8 +159,11 @@ void setup_switches(int *switchfds, int *pins)
 		printf("Pin %d exported\n", pins[i]);
 	}
 
+	if (close(exportfd) < 0)
+		ERR("closing /sys/class/gpio/export failed");
+
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/direction", pins[i]);
+		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/direction", pins[i]);
 		int directionfd;
 		char *in = "in";
 		if ((directionfd = open(buf, O_WRONLY)) < 0)
@@ -167,7 +176,7 @@ void setup_switches(int *switchfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/edge", pins[i]);
+		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/edge", pins[i]);
 		int directionfd;
 		char *edge = "both";
 		if ((directionfd = open(buf, O_WRONLY)) < 0)
@@ -180,7 +189,7 @@ void setup_switches(int *switchfds, int *pins)
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		snprintf(buf, BUF_SIZE, "./sys/class/gpio/gpio%d/value", pins[i]);
+		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/value", pins[i]);
 		if ((switchfds[i] = open(buf, O_RDWR)) < 0)
 			ERR("opening value file failed");
 	}
