@@ -25,6 +25,18 @@
 #define SWITCH_COUNT 3
 #define BUF_SIZE 50
 
+#define write_state(device, state) if (write(device.fd, state, sizeof(char)) < 0) ERR("setting state failed");
+#define read_from_start(device, buf, size) do {\
+	if (lseek(device.fd, 0, SEEK_SET) < 0) ERR("cannot seek to start of file");\
+	if (read(device.fd, buf, size) < 0) ERR("cannot read value file");\
+} while (0)
+#define single_write(file, contents) do {\
+	int fd;\
+	if ((fd = open(file, O_WRONLY)) < 0) ERR(file);\
+	if (write(fd, contents, strlen(contents)) < 0) ERR(file);\
+	if (close(fd) < 0) ERR(file);\
+} while (0)
+
 typedef struct gpio_device {
 	int pin;
 	int fd;
@@ -72,11 +84,9 @@ void display_sequence(char *seq, unsigned length, gpio_device *leds)
 	for (unsigned i = 0; i < length; ++i) {
 		sleep(1);
 		int idx = seq[i];
-		if (write(leds[idx].fd, "1", sizeof(char)) < 0)
-			ERR("turning led on failed");
+		write_state(leds[idx], "1");
 		sleep(1);
-		if (write(leds[idx].fd, "0", sizeof(char)) < 0)
-			ERR("turning led off failed");
+		write_state(leds[idx], "0");
 	}
 }
 
@@ -100,14 +110,7 @@ void setup_leds(gpio_device *leds, int *pins)
 
 	for (unsigned i = 0; i < LED_COUNT; ++i) {
 		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/direction", pins[i]);
-		int directionfd;
-		char *out = "out";
-		if ((directionfd = open(buf, O_WRONLY)) < 0)
-			ERR("opening direction file failed");
-		if (write(directionfd, out, strlen(out)) < 0)
-			ERR("writing direction failed");
-		if (close(directionfd) < 0)
-			ERR("closing direction file failed");
+		single_write(buf, "out");
 	}
 
 	for (unsigned i = 0; i < LED_COUNT; ++i) {
@@ -166,26 +169,12 @@ void setup_switches(gpio_device *switches, int *pins)
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
 		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/direction", pins[i]);
-		int directionfd;
-		char *in = "in";
-		if ((directionfd = open(buf, O_WRONLY)) < 0)
-			ERR("opening direction file failed");
-		if (write(directionfd, in, strlen(in)) < 0)
-			ERR("writing direction failed");
-		if (close(directionfd) < 0)
-			ERR("closing direction file failed");
+		single_write(buf, "in");
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
 		snprintf(buf, BUF_SIZE, "/sys/class/gpio/gpio%d/edge", pins[i]);
-		int directionfd;
-		char *edge = "both";
-		if ((directionfd = open(buf, O_WRONLY)) < 0)
-			ERR("opening edge file failed");
-		if (write(directionfd, edge, strlen(edge)) < 0)
-			ERR("writing edge type failed");
-		if (close(directionfd) < 0)
-			ERR("closing edge file failed");
+		single_write(buf, "both");
 	}
 
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
@@ -198,20 +187,14 @@ void setup_switches(gpio_device *switches, int *pins)
 
 void read_sequence(char *seq, unsigned length, gpio_device *switches, gpio_device *leds) 
 {
-	char state;
 	for (unsigned i = 0; i < length; i++) {
 		int pressed;
 		// wait for a press
 		while ((pressed = read_button(switches)) < 0) ;
-		printf("Got press %d\n", pressed);
-		state = '1';
-		if (write(leds[pressed].fd, &state, sizeof(state)) < 0)
-			ERR("turning on led failed");
+		write_state(leds[pressed], "1");
 		// wait for release
 		while (read_button(switches) > 0) ;
-		state = '0';
-		if (write(leds[pressed].fd, &state, sizeof(state)) < 0)
-			ERR("turning off led failed");
+		write_state(leds[pressed], "0");
 		if (pressed != seq[i])
 			lost_game(switches, leds);
 	}
@@ -221,12 +204,8 @@ int read_button(gpio_device *switches)
 {
 	char val;
 	// dummy read and seek before polling
-	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		if (lseek(switches[i].fd, 0, SEEK_SET) < 0)
-			ERR("cannot seek to start of file");
-		if (read(switches[i].fd, &val, sizeof(val)) < 0)
-			ERR("cannot read from value file");
-	}
+	for (unsigned i = 0; i < SWITCH_COUNT; ++i)
+		read_from_start(switches[i], &val, sizeof(val));
 
 	struct pollfd fds[SWITCH_COUNT];
 	for (int i = 0; i < SWITCH_COUNT; ++i)
@@ -238,13 +217,8 @@ int read_button(gpio_device *switches)
 	if (poll(fds, SWITCH_COUNT, -1) < 0)
 		ERR("poll failed");
 
-	// seek to start and read value to reset
-	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		if (lseek(switches[i].fd, 0, SEEK_SET) < 0)
-			ERR("cannot seek to start of file");
-		if (read(switches[i].fd, &val, sizeof(val)) < 0)
-			ERR("cannot read from value file");
-	}
+	for (unsigned i = 0; i < SWITCH_COUNT; ++i)
+		read_from_start(switches[i], &val, sizeof(val));
 
 	switch (poll(fds, SWITCH_COUNT, 50)) {
 		case -1:
@@ -259,10 +233,7 @@ int read_button(gpio_device *switches)
 
 	int pressed = -1;
 	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
-		if (lseek(switches[i].fd, 0, SEEK_SET) < 0)
-			ERR("cannot seek to start of file");
-		if (read(switches[i].fd, &val, sizeof(val)) < 0)
-			ERR("cannot read from value file");
+		read_from_start(switches[i], &val, sizeof(val));
 		if (val == '0')
 			pressed = pressed < 0 ? i : -1;
 	}
@@ -272,16 +243,11 @@ int read_button(gpio_device *switches)
 void lost_game(gpio_device *switches, gpio_device *leds)
 {
 	gpio_device fail_led = leds[3];
-	char status;
 	for (unsigned i = 0; i < 3; ++i) {
 		sleep(1);
-		status = '1';
-		if (write(fail_led.fd, &status, sizeof(status)) < 0)
-			ERR("turning on led failed");
+		write_state(fail_led, "1");
 		sleep(1);
-		status = '0';
-		if (write(fail_led.fd, &status, sizeof(status)) < 0)
-			ERR("turning off led failed");
+		write_state(fail_led, "0");
 	}
 	cleanup(leds, LED_COUNT);
 	cleanup(switches, SWITCH_COUNT);
