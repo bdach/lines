@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #define ERR(source) perror(source),\
+	cleanup(leds, LED_COUNT),\
+	cleanup(switches, SWITCH_COUNT),\
 	fprintf(stderr, "%s:%d\n", __FILE__, __LINE__),\
 	exit(EXIT_FAILURE)
 
@@ -42,6 +44,9 @@ typedef struct gpio_device {
 	int fd;
 } gpio_device;
 
+gpio_device leds[LED_COUNT];
+gpio_device switches[LED_COUNT];
+
 void generate_sequence(char *buf, unsigned length);
 void display_sequence(char *seq, unsigned length, gpio_device *leds);
 void read_sequence(char *seq, unsigned length, gpio_device *switches, gpio_device *leds);
@@ -56,8 +61,6 @@ int main(void)
 	char sequence[MAX_SEQ_LEN];
 	int ledpins[LED_COUNT] = {BLUE_LED, WHITE_LED, GREEN_LED, RED_LED};
 	int switchpins[SWITCH_COUNT] = {BLUE_SWITCH, WHITE_SWITCH, GREEN_SWITCH};
-	gpio_device leds[LED_COUNT];
-	gpio_device switches[LED_COUNT];
 
 	setup_leds(leds, ledpins);
 	setup_switches(switches, switchpins);
@@ -81,11 +84,13 @@ void generate_sequence(char *buf, unsigned length)
 
 void display_sequence(char *seq, unsigned length, gpio_device *leds)
 {
+	int interval = (MAX_SEQ_LEN + 1 - length) * 200000;
+	usleep(1000000 - interval);
 	for (unsigned i = 0; i < length; ++i) {
-		sleep(1);
+		usleep(interval);
 		int idx = seq[i];
 		write_state(leds[idx], "1");
-		sleep(1);
+		usleep(interval);
 		write_state(leds[idx], "0");
 	}
 }
