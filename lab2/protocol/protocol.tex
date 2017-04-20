@@ -48,7 +48,7 @@ Student: \@author
 
 Celem drugiego ćwiczenia było przygotowanie aplikacji w języku C, obsługującą dostarczoną płytkę z przyciskami oraz diodami LED za pośrednictwem interfejsu GPIO (ang. \emph{General-Purpose Input/Output}). Aplikacja ta miała reagować na zmiany stanu przycisków za pomocą przerwań (bez czekania aktywnego).
 
-Stworzona aplikacja to klon gry elektronicznej \emph{Simon}. W tej grze, w kolejnych rundach pokazywane są coraz dłuższe sekwencje sygnałów świetlnych. Celem gracza jest bezbłędne powtórzenie danych sekwencji, wciskając odpowiednie przyciski. Dla prostoty w aplikacji ustalono limit długości tych sekwencji na 20.
+Stworzona aplikacja to klon gry elektronicznej \emph{Simon}. W tej grze, w kolejnych rundach użytkownikowi pokazywane są coraz dłuższe sekwencje sygnałów świetlnych. Celem gracza jest bezbłędne powtórzenie danych sekwencji, wciskając odpowiednie przyciski. Dla prostoty w aplikacji ustalono limit długości tych sekwencji na 5. Podczas drugiej sesji laboratoryjnej dodane zostało ponadto utrudnienie w postaci wzrastającej szybkości pokazywania kolejnych sekwencji.
 
 Poza utworzeniem aplikacji, w skład ćwiczenia laboratoryjnego wchodziło utworzenie pakietu Buildroota zawierającego ją, oraz przetestowanie zdalnego debugowania aplikacji za pomocą \verb+gdbserver+.
 
@@ -64,7 +64,7 @@ gdzie \verb+BR2_ROOT_PATH+ oznacza katalog główny Buildroota w wersji 2016.11.
 
 \subsection{Aplikacja \texttt{simon}}
 
-Źródło aplikacji znajduje się w folderze \verb+simon+ w załączonym archiwum. Jest to program w C, używający do obsługi pinów GPIO wbudowany w system Linux interfejs \verb+sysfs+. Użycie go sprowadza się do wykonywania operacji na plikach specjalnych udostępnionych przez sterowniki jądra.
+Źródło utworzonej aplikacji znajduje się w folderze \verb+simon+ w załączonym archiwum. Jest to program w języku C, używający do obsługi pinów GPIO wbudowany w system Linux interfejs \verb+sysfs+. Użycie go sprowadza się do wykonywania operacji na plikach specjalnych udostępnionych przez sterowniki jądra.
 
 Stworzony program jest dość nieskomplikowany w swoim działaniu. Na początku, funkcje \verb+setup_leds+ i \verb+setup_switches+ wpisują do pliku \verb+/sys/class/gpio/export+ numery pinów odpowiadające diodom LED oraz przyciskom na dostarczonej płytce, co powoduje pojawienie się katalogów o nazwie \verb+/sys/class/gio/exportNN+, gdzie \verb+NN+ to numer pinu.
 
@@ -74,9 +74,56 @@ Po wyeksportowaniu pinów są one odpowiednio konfigurowane:
 	\item Dla przycisków kierunek ustalany jest na \verb+in+. Dodatkowo, aby można było użyć funkcji \verb+poll+ do obsługi przerwań, do pliku \verb+edge+ wpisywana jest wartość \verb+both+.
 \end{itemize}
 
-Później losowana jest sekwencja, która będzie pokazywana użytkownikowi. W pętli następuje naprzemienne pokazywanie podciągu wylosowanej sekwencji i wczytywania wejścia z przycisków; długość podciągu zwiększa się o 1 w każdej iteracji pętli.
+Później losowana w funkcji \verb+generate_sequence+ jest sekwencja, która będzie pokazywana użytkownikowi. W pętli następuje naprzemienne pokazywanie podciągu wylosowanej sekwencji i wczytywania wejścia z przycisków; długość podciągu zwiększa się o 1 w każdej iteracji pętli.
 
 Najbardziej skomplikowaną częścią programu jest detekcja wciśnięć przycisków. Jest to spowodowane koniecznością wykonania \emph{debouncingu} -- wyeliminowania drgań sygnału tuż po wciśnięciu lub puszczeniu przycisku.
+
+\begin{lstlisting}[language=C,caption=Detekcja wciśnięć pojedynczego przycisku -- funkcja \texttt{read\_button}]
+#define read_from_start(device, buf, size) do {\
+	if (lseek(device.fd, 0, SEEK_SET) < 0) ERR("cannot seek to start of file");\
+	if (read(device.fd, buf, size) < 0) ERR("cannot read value file");\
+} while (0)
+// ...
+int read_button(gpio_device *switches)
+{
+	char val;
+	// dummy read and seek before polling
+	for (unsigned i = 0; i < SWITCH_COUNT; ++i)
+		read_from_start(switches[i], &val, sizeof(val));
+
+	struct pollfd fds[SWITCH_COUNT];
+	for (int i = 0; i < SWITCH_COUNT; ++i)
+	{
+		fds[i].fd = switches[i].fd;
+		fds[i].events = POLLPRI | POLLERR;
+	}
+
+	if (poll(fds, SWITCH_COUNT, -1) < 0)
+		ERR("poll failed");
+
+	for (unsigned i = 0; i < SWITCH_COUNT; ++i)
+		read_from_start(switches[i], &val, sizeof(val));
+
+	switch (poll(fds, SWITCH_COUNT, 50)) {
+		case -1:
+			ERR("second poll failed");
+		case 0:
+			// no change since last poll
+			break;
+		default:
+			// something changed, so ignore
+			return -1;
+	}
+
+	int pressed = -1;
+	for (unsigned i = 0; i < SWITCH_COUNT; ++i) {
+		read_from_start(switches[i], &val, sizeof(val));
+		if (val == '0')
+			pressed = pressed < 0 ? i : -1;
+	}
+	return pressed;
+}
+\end{lstlisting}
 
 W tym celu wykonywane są dwa wywołania funkcji \verb+poll+. Pierwsze wywołanie blokuje program do momentu wykrycia pierwszej zmiany stanu jednego z deskryptorów związanych z przyciskami. Po odblokowaniu programu, wykonywane jest drugie wywołanie -- tym razem z \emph{time-out}em ustawionym na ok. 100 ms.
 
@@ -90,10 +137,26 @@ Z przyczyn technicznych między wywołaniami funkcji \verb+poll+ następuje prze
 \subsection{Pakiet Buildroota}
 
 Przygotowanie pakietu Buildroota przebiegało bardzo podobnie jak w przypadku skryptu Ruby w poprzednim ćwiczeniu. Dodany został katalog \verb+package/simon+ z plikami \verb+Config.in+ oraz \verb+simon.mk+, oraz wpis do pliku \verb+package/Config.in+ wskazujący na nową paczkę. Plik \verb+.mk+ został poszerzony o komendę, która odpowiada za zbudowanie pliku wykonywalnego ze źródeł:
-\begin{lstlisting}[language=bash]
+\begin{lstlisting}[language=bash,caption=Zawartość pliku \texttt{simon.mk}]
+################################################################################
+#
+# simon
+#
+################################################################################
+
+SIMON_VERSION = 1.4
+SIMON_SITE = $(TOPDIR)/../simon
+SIMON_SITE_METHOD = local
+
 define SIMON_BUILD_CMDS
-   $(MAKE) $(TARGET_CONFIGURE_OPTS) CFLAGS="$(CFLAGS) -std=gnu99" simon -C $(@D)
+   $(MAKE) $(TARGET_CONFIGURE_OPTS) CFLAGS+="-std=gnu99" simon -C $(@D)
 endef
+define SIMON_INSTALL_TARGET_CMDS 
+   $(INSTALL) -D -m 0755 $(@D)/simon $(TARGET_DIR)/usr/bin 
+endef
+SIMON_LICENSE = MIT
+
+$(eval $(generic-package))
 \end{lstlisting}
 W celu umożliwienia korzystania z flagi \verb+-std=gnu99+, po ustawieniu opcji poprzez zmienną \\ 
 \verb+TARGET_CONFIGURE_OPTS+ zostaje ona dołączona do zmiennej środowiskowej \verb+CFLAGS+.
@@ -117,8 +180,9 @@ Po wybraniu tej opcji, automatycznie zaznaczana jest opcja \verb+gdbserver+.
 
 Aby komputer-host mógł połączyć się ze zdalnym serwerem, należy włączyć budowanie kompatybilnej z nim wersji \verb+gdb+ opcją
 \centeredmenu{Toolchain > Build cross gdb for the host}
-Wreszcie, aby aplikacje budowane w procesie tworzenia obrazu mogły być debugowane, należy włączyć opcję dodawania symboli
+Wreszcie, zaznaczona została opcja
 \centeredmenu{Build options > build packages with debugging symbols}
+Po jej zaznaczeniu, Buildroot w trakcie kompilacji skompiluje zaznaczone pakiety dwukrotnie -- raz na system docelowy, bez symboli, oraz drugi, z opcją \verb+-g+, zawierający symbole. Pliki wykonywalne powstałe z drugiej kompilacji można wtedy podać jako argument do zdalnego wywołania \verb+gdb+.
 
 \subsection{Zdalne debugowanie za pomocą \texttt{gdbserver}}
 
@@ -129,9 +193,15 @@ Po wykonaniu obrazu, skopiowaniu go na kartę SD i zrestartowaniu płytki przyst
 zaś na stacji roboczej połączono się z serwerem komendami
 \begin{lstlisting}
 $ /malina/dachb/buildroot-2016.11.2/output/host/usr/bin/arm-none-linux-gnueabi-gdb \ 
-  /malina/dachb/simon/simon
-(gdb) target remote 192.168.143.xxx:7777
+  /malina/dachb/buildroot-2016.11.2/output/build/simon-1.4/simon
+(gdb) target remote 192.168.143.149:7777
 \end{lstlisting}
-W wyniku powyższych czynności można debugować kod wykonywany na płytce z poziomu komputera laboratoryjnego, m.in. przechodząc po kolejnych instrukcjach lub ustawiając \emph{breakpoint}.
+W wyniku powyższych czynności można debugować kod wykonywany na płytce z poziomu komputera laboratoryjnego, wykonując takie operacje wspierane przez \verb+gdb+, jak:
+\begin{itemize}
+	\item ustawianie breakpointów (\emph{break}),
+	\item przejście do następnej instrukcji (\emph{next}, \emph{step}),
+	\item kontynuacja wykonania programu do następnego breakpointa (\emph{continue}),
+	\item wypisanie wartości jednej z zadeklarowanych zmiennych (\emph{print}).
+\end{itemize}
 
 \end{document}
