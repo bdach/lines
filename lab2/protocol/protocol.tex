@@ -66,7 +66,7 @@ gdzie \verb+BR2_ROOT_PATH+ oznacza katalog główny Buildroota w wersji 2016.11.
 
 Źródło utworzonej aplikacji znajduje się w folderze \verb+simon+ w załączonym archiwum. Jest to program w języku C, używający do obsługi pinów GPIO wbudowany w system Linux interfejs \verb+sysfs+. Użycie go sprowadza się do wykonywania operacji na plikach specjalnych udostępnionych przez sterowniki jądra.
 
-Stworzony program jest dość nieskomplikowany w swoim działaniu. Na początku, funkcje \verb+setup_leds+ i \verb+setup_switches+ wpisują do pliku \verb+/sys/class/gpio/export+ numery pinów odpowiadające diodom LED oraz przyciskom na dostarczonej płytce, co powoduje pojawienie się katalogów o nazwie \verb+/sys/class/gio/exportNN+, gdzie \verb+NN+ to numer pinu.
+Stworzony program jest dość nieskomplikowany w swoim działaniu. Na początku, funkcje \verb+setup_leds+ i \verb+setup_switches+ wpisują do pliku \verb+/sys/class/gpio/export+ numery pinów odpowiadające diodom LED oraz przyciskom na dostarczonej płytce, co powoduje pojawienie się katalogów o nazwie \verb+/sys/class/gpio/gpioNN+, gdzie \verb+NN+ to numer pinu.
 
 Po wyeksportowaniu pinów są one odpowiednio konfigurowane:
 \begin{itemize}
@@ -74,7 +74,7 @@ Po wyeksportowaniu pinów są one odpowiednio konfigurowane:
 	\item Dla przycisków kierunek ustalany jest na \verb+in+. Dodatkowo, aby można było użyć funkcji \verb+poll+ do obsługi przerwań, do pliku \verb+edge+ wpisywana jest wartość \verb+both+.
 \end{itemize}
 
-Później losowana w funkcji \verb+generate_sequence+ jest sekwencja, która będzie pokazywana użytkownikowi. W pętli następuje naprzemienne pokazywanie podciągu wylosowanej sekwencji i wczytywania wejścia z przycisków; długość podciągu zwiększa się o 1 w każdej iteracji pętli.
+Później losowana w funkcji \verb+generate_sequence+ jest sekwencja, która będzie pokazywana użytkownikowi. W pętli następuje naprzemienne pokazywanie początkowego podciągu wylosowanej sekwencji i wczytywanie wejścia z przycisków; długość podciągu zwiększa się o 1 w każdej iteracji pętli. W każdej iteracji interwał między kolejnymi błyśnięciami diod jest coraz mniejszy.
 
 Najbardziej skomplikowaną częścią programu jest detekcja wciśnięć przycisków. Jest to spowodowane koniecznością wykonania \emph{debouncingu} -- wyeliminowania drgań sygnału tuż po wciśnięciu lub puszczeniu przycisku.
 
@@ -192,8 +192,9 @@ Po wykonaniu obrazu, skopiowaniu go na kartę SD i zrestartowaniu płytki przyst
 \end{lstlisting}
 zaś na stacji roboczej połączono się z serwerem komendami
 \begin{lstlisting}
-$ /malina/dachb/buildroot-2016.11.2/output/host/usr/bin/arm-none-linux-gnueabi-gdb \ 
-  /malina/dachb/buildroot-2016.11.2/output/build/simon-1.4/simon
+$ /malina/dachb/buildroot-2016.11.2/output/host/opt/ext-toolchain/bin/\
+  arm-none-linux-gnueabi-gdb /malina/dachb/buildroot-2016.11.2/output/build/\
+  simon-1.4/simon
 (gdb) target remote 192.168.143.149:7777
 \end{lstlisting}
 W wyniku powyższych czynności można debugować kod wykonywany na płytce z poziomu komputera laboratoryjnego, wykonując takie operacje wspierane przez \verb+gdb+, jak:
