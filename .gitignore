@@ -13,3 +13,7 @@
 # tarballs
 
 *.tar.gz
+
+# project 3: db
+
+*.sqlite3

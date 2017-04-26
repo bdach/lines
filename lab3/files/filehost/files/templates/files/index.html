@@ -1,0 +1,76 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>FileHost</title>
+		<link href="{% static "files/css/bootstrap.min.css" %}" rel="stylesheet">
+	</head>
+	<body>
+		<nav class="navbar navbar-inverse navbar-static-top">
+			<div class="container-fluid">
+				<div class="navbar-header">
+					<a class="navbar-brand" href="#">FileHost</a>
+				</div>
+			</div>
+		</nav>
+		<div class="container">
+			<h1>Uploaded files</h1>
+
+			<table class="table table-hover">
+				<tr>
+					<th>File title</th>
+					<th>File name</th>
+					<th>Size</th>
+					<th></th>
+				</tr>
+				{% for file in files %}
+				<tr>
+					<td>{{ file.name }}</td>
+					<td>{{ file.content.name }}</td>
+					<td>{{ file.content.size }}</td>
+					<td>
+						<a class="btn btn-xs btn-success" href="{% url "download" %}?id={{ file.id }}">
+							Download
+						</a>
+					</td>
+				</tr>
+				{% endfor %}
+			</table>
+			<nav>
+				<ul class="pagination">
+					<li class="{% if not files.has_previous %}disabled{% endif %}">
+						<a href="{% if files.has_previous %}?page={{ files.previous_page_number }}{% endif %}" aria-label="Previous">
+							<span aria-hidden="true">&laquo;</span>
+						</a>
+					</li>
+					{% if files.has_previous %}
+					<li class="active">
+						<a href="?page={{ files.previous_page_number }}">{{ files.previous_page_number }}</a>
+					</li>
+					{% endif %}
+					<li class="active">
+						<a href="#">{{ files.number }} <span class="sr-only">(current)</span></a>
+					</li>
+					{% if files.has_next %}
+					<li class="active">
+						<a href="?page={{ files.next_page_number }}">{{ files.next_page_number }}</a>
+					</li>
+					{% endif %}
+					<li class="{% if not files.has_next %}disabled{% endif %}">
+						<a href="{% if files.has_next %}?page={{ files.next_page_number }}{% endif %}" aria-label="Previous">
+							<span aria-hidden="true">&raquo;</span>
+						</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+		<script src="{% static "files/js/bootstrap.min.js" %}"></script>
+	</body>
+</html>

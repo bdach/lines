@@ -1,0 +1,11 @@
+gpio set 18;
+sleep 1;
+gpio clear 18;
+if gpio input 10; then
+	gpio set 24;
+	run admin;
+fi;
+if gpio input 22; then
+	gpio set 23;
+	run user;
+fi;
