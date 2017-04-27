@@ -1,0 +1,16 @@
+gpio set 18
+sleep 1
+gpio clear 18
+if gpio input 10 || gpio input 22 || gpio input 27; then
+	gpio set 24
+	fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
+	fatload mmc 0:1 ${kernel_addr_r} zImage_admin
+	setenv bootargs "${bootargs_orig} console=ttyAMA0"
+	bootz ${kernel_addr_r} - ${fdt_addr_r}
+else
+	gpio set 23
+	fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
+	fatload mmc 0:1 ${kernel_addr_r} zImage_user
+	setenv bootargs "${bootargs_orig} console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
+	bootz ${kernel_addr_r} - ${fdt_addr_r}
+fi
