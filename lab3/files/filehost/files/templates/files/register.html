@@ -1,0 +1,35 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>FileHost | Register</title>
+		<link href="{% static "files/css/bootstrap.min.css" %}" rel="stylesheet">
+	</head>
+	<body>
+		<div class="container">
+			<div class="row">
+				<p></p>
+				<div class="panel panel-default panel-primary">
+					<div class="panel-heading">Register an account</div>
+					<form method="post">
+						<div class="panel-body">
+							{% csrf_token %}
+							{{ form.as_p }}
+						</div>
+						<div class="panel-footer">
+							<input type="submit" class="btn btn-success" value="Register" />
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+		<script src="{% static "files/js/bootstrap.min.js" %}"></script>
+	</body>
+</html>

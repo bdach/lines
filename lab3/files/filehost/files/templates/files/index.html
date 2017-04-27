@@ -16,9 +16,53 @@
 				<div class="navbar-header">
 					<a class="navbar-brand" href="#">FileHost</a>
 				</div>
+				{% if not user.is_authenticated %}
+				<form class="navbar-form navbar-right" role="login" action="{% url "login" %}" method="post">
+					{% csrf_token %}
+					<div class="form-group">
+						<input name="username" type="text" class="form-control" placeholder="Username" />
+					</div>
+					<div class="form-group">
+						<input name="password" type="password" class="form-control" placeholder="Password" />
+					</div>
+					<button type="submit" class="btn btn-default">Log in</button>
+				</form>
+				<div class="navbar-right">
+					<ul class="nav navbar-nav">
+						<li><a href="{% url "register" %}">Register</a></li>
+					</ul>
+				</div>
+				{% endif %}
+				{% if user.is_authenticated %}
+				<div class="navbar-right">
+					<p class="navbar-text">Signed in as {{ user.username }}</p>
+					<ul class="nav navbar-nav">
+						<li><a href="{% url "logout" %}">Log out</a></li>
+					</ul>
+				</div>
+				{% endif %}
 			</div>
 		</nav>
 		<div class="container">
+			{% for message in messages %}
+			<div class="alert {{ message.tags }}">{{ message }}</div>
+			{% endfor %}
+
+			{% if user.is_authenticated %}
+			<div class="panel panel-default panel-primary">
+				<div class="panel-heading">Upload new file</div>
+				<form action="{% url "upload" %}" method="post" enctype="multipart/form-data">
+					<div class="panel-body">
+						{% csrf_token %}
+						{{ form.as_p }}
+					</div>
+					<div class="panel-footer">
+						<input type="submit" class="btn btn-success" value="Upload" />
+					</div>
+				</form>
+			</div>
+			{% endif %}
+
 			<h1>Uploaded files</h1>
 
 			<table class="table table-hover">
