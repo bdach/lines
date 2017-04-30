@@ -1,0 +1,23 @@
+# nginx configuration for the FileHost application
+
+server {
+	listen 0.0.0.0:80 default_server;
+	listen [::]:80 default_server;
+
+	root /var/www;
+
+	server_name filehost;
+
+	# Redirect requests to the root folder to the uWSGI socket file
+	location / {
+		include uwsgi_params;
+		uwsgi_pass unix:/var/www/filehost.sock;
+	}
+
+	# Serve static files here
+	location /static {
+		autoindex on;
+		# Remember to update STATIC_ROOT and run python manage.py collectstatic.
+		alias /var/www/static;
+	}
+}

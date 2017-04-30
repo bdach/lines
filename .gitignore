@@ -14,6 +14,7 @@
 
 *.tar.gz
 
-# project 3: db
+# project 3
 
 *.sqlite3
+*.pyc
