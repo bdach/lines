@@ -1,0 +1,180 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{helvet}
+\usepackage{bera}
+\usepackage{hyperref}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[polish]{babel}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{menukeys}
+
+\renewcommand\familydefault{\sfdefault}
+
+\lstset{basicstyle=\ttfamily,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  stringstyle=\color{teal},
+  captionpos=b
+}
+
+\title{Linux w systemach wbudowanych -- Laboratorium 3}
+\author{Bartłomiej Dach}
+
+\newcommand{\centeredmenu}[1]{
+	\begin{center}
+		\menu{#1}
+	\end{center}
+}
+
+\begin{document}
+
+\makeatletter
+\begin{flushright}
+	Warszawa, \@date
+\end{flushright}
+\begin{center}
+	\LARGE{\@title}
+\end{center}
+\vspace{0.25cm}
+Student: \@author
+\makeatother
+
+\section{Treść zadania}
+
+Trzecie zadanie laboratoryjne składało się z następujących kroków:
+
+\begin{enumerate}
+	\item przygotowania systemu administracyjnego z systemem plików \verb+initramfs+,
+		umożliwiającego:
+		\begin{itemize}
+			\item zarządzanie zawartością karty SD poprzez jej: partycjonowanie,
+				formatowanie oraz naprawianie systemów plików znajdujących się
+				na niej,
+			\item kopiowanie i instalację obrazu systemu użytkowego z komputera
+				laboratoryjnego.
+		\end{itemize}
+	\item podzielenie karty SD na następujące partycje:
+		\begin{itemize}
+			\item 1. partycja, z systemem plików VFAT, zawierająca obrazy systemów:
+				ratunkowego, administracyjnego i użytkowego oraz skrypty
+				uruchomieniowe bootloadera \verb+uboot+,
+			\item 2. partycja, zawierająca system plików \verb+ext4+, będący głównym
+				systemem plików dla systemu użytkowego,
+			\item 3. partycja, na której będą umieszczane pliki dodane przez
+				użytkowników i udostępniane poprzez system użytkowy.
+		\end{itemize}
+	\item przygotowanie systemu użytkowego, który zawiera serwer WWW (w moim przypadku
+		zrealizowany we frameworku Django), sterowany poprzez interfejs WWW. Serwer ma
+		umożliwiać pobieranie plików umieszczonych na trzeciej partycji karty SD oraz
+		dodawanie nowych plików na tą partycję przez zalogowanych użytkowników,
+	\item przygotowanie skryptu bootloadera, który umożliwi wybór uruchamianego systemu
+		w zależności od stanu wciśniętych przycisków na dostarczonej płytce.
+\end{enumerate}
+
+\section{Procedura odtworzenia projektu z załączonego archiwum}
+
+\subsection{Kompilacja systemu administracyjnego}
+
+Pliki konfiguracyjne systemu administracyjnego znajdują się w katalogu \directory{files/admin}
+w dostarczonym archiwum. W folderze tym znajduje się również skrypt powłoki, po którego
+uruchomieniu komendą
+\begin{lstlisting}[language=bash]
+./make_admin.sh BR2PATH
+\end{lstlisting}
+gdzie \verb+BR2PATH+ oznacza katalog główny Buildroota, nastąpi przygotowanie obrazu systemu
+administracyjnego.
+
+\subsection{Kompilacja systemu użytkowego}
+
+Pliki niezbędne do kompilacji systemu użytkowego znajdują się w folderze \directory{files/user}.
+Poza łatą konfigurującą opcje obrazu (plik \texttt{user.patch}), folder ten zawiera paczkę
+\texttt{uwsgi}, stanowiącą środowisko serwerowe aplikacji. Pliki konfiguracyjne paczki zostały
+zaadoptowane z łaty \cite{uwsgi-package}.
+
+W celu rozpoczęcia procesu kompilacji wystarczy wykonać dostarczony skrypt
+\begin{lstlisting}[language=bash]
+./make_user.sh BR2PATH
+\end{lstlisting}
+gdzie \verb+BR2PATH+ to katalog główny Buildroota. Wygenerowany zostanie obraz systemu, a także
+skompresowana zawartość docelowa systemu plików dla systemu.
+
+\subsection{Instalacja skryptu rozruchowego i obrazów}
+
+Po kompilacji obu obrazów, należy skorzystać z systemu ratunkowego w celu umieszczenia obrazów
+obu systemów na płytce.
+
+\begin{itemize}
+	\item Obraz systemu administracyjnego powinien mieć nazwę \texttt{zImage\_admin}.
+	\item Obraz systemu użytkowego powinien mieć nazwę \texttt{zImage\_user}.
+\end{itemize}
+
+Skrypt uruchomieniowy pozwalający na wybór systemu za pomocą wejść GPIO znajduje się
+w archiwum w pliku \directory{files/boot.script}. Skrypt ten należy skopiować na pierwszą
+partycję karty SD, a następnie skompilować go poleceniem
+\begin{lstlisting}
+# mkimage -T script -C none -n "Start script" -d boot.script boot.scr
+\end{lstlisting}
+
+\subsection{Partycjonowanie dysku oraz wyodrębnienie użytkowego systemu plików z archiwum}
+
+Po zainstalowaniu skryptów i skopiowaniu obrazów można uruchomić system administracyjny w celu
+podziału karty SD na partycje. Do podziału można użyć dołączonego programu \texttt{parted}.
+W wyniku podziału obok rozruchowej partycji VFAT muszą znaleźć się 2 partycje w systemie
+\texttt{ext4}, przy czym druga z nich może mieć nie mniej niż ok. 150 MB.
+
+Po podziale należy założyć na nowych partycjach systemy plików poleceniami
+\begin{lstlisting}
+# mkfs.ext4 /dev/mmcblk0p2
+# mkfs.ext4 /dev/mmcblk0p3
+\end{lstlisting}
+Po wykonaniu powyższych poleceń można przystąpić do instalacji systemu plików na drugiej
+partycji. Skompresowany lik z obrazem \texttt{rootfs.ext4.gz} można skopiować do pamięci
+podręcznej płytki (tj. do \texttt{initramfs}) za pośrednictwem SSH. Po przesłaniu wypakowanie
+na drugą partycję można dokonać poleceniem
+\begin{lstlisting}
+# gunzip rootfs.ext4.gz | dd of=/dev/mmcblk0p2 bs=2M
+\end{lstlisting}
+Po wykonaniu tych kroków system użytkowy powinien być gotowy do działania.
+
+\section{Opis rozwiązania}
+
+W przypadku obu systemów konfiguracja opiera się na podstawowej konfiguracji, która opisana
+została w ,,Poradniku laboratoryjnym'':
+\begin{itemize}
+	\item port getty ustawiony na \texttt{ttyAMA0},
+	\item wartość \emph{primary download site} wskazująca na lokalny serwer lustrzany,
+	\item \emph{target ABI} na \texttt{EABI},
+	\item użyty został zewnętrzny \emph{toolchain},
+	\item w systemie administracyjnym dodany został \texttt{initramfs} wkompilowany
+		w jądro,
+	\item system plików został skompresowany za pomocą gzip.
+\end{itemize}
+
+\subsection{Konfiguracja systemu administracyjnego}
+
+Nazwa hosta oraz wiadomość powitalna w systemie administracyjnym zostały zmienione, aby
+informować użytkowników, na którym systemie pracują. Dodatkowo, w celu ułatwienia korzystania
+z serwera SSH \texttt{dropbear} użytkownik \texttt{root} otrzymał hasło \texttt{LINSWlab3}.
+
+\subsection{Konfiguracja systemu użytkowego}
+
+\subsection{Skrypt uruchomieniowy -- wybór systemu}
+
+\subsection{Realizacja serwera w Django}
+
+\subsection{Konfiguracja środowiska uruchomieniowego serwera}
+
+\begin{thebibliography}{9}
+	\bibitem{uwsgi-package}
+		Andrea Cappelli,
+		\emph{[1/1] New package: uwsgi},
+		Patchwork,
+		\url{https://patchwork.ozlabs.org/patch/561902/}.
+\end{thebibliography}
+
+\end{document}
