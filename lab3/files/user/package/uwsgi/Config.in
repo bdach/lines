@@ -1,0 +1,6 @@
+config BR2_PACKAGE_UWSGI
+	bool "uwsgi"
+    select BR2_PACKAGE_LIBXML2
+	help
+        The uWSGI project aims at developing a full stack for building hosting services.
+        https://uwsgi-docs.readthedocs.org/en/latest/

@@ -1,5 +1,5 @@
---- default.config	2017-04-30 19:29:31.553089844 +0200
-+++ user.config	2017-04-30 19:39:24.213009428 +0200
+--- ../default.config	2017-05-01 14:21:45.242269517 +0200
++++ user.config	2017-05-01 14:53:17.776390184 +0200
 @@ -9,6 +9,7 @@
  BR2_HOST_GCC_AT_LEAST_4_8=y
  BR2_HOST_GCC_AT_LEAST_4_9=y
@@ -1469,11 +1469,12 @@
  # BR2_PACKAGE_LIBJSON is not set
  # BR2_PACKAGE_LIBROXML is not set
  # BR2_PACKAGE_LIBUCL is not set
- # BR2_PACKAGE_LIBXML2 is not set
+-# BR2_PACKAGE_LIBXML2 is not set
 -
 -#
 -# libxml++ needs a toolchain w/ C++, wchar, threads, gcc >= 4.8
 -#
++BR2_PACKAGE_LIBXML2=y
 +# BR2_PACKAGE_LIBXMLPP is not set
  # BR2_PACKAGE_LIBXMLRPC is not set
  # BR2_PACKAGE_LIBXSLT is not set
@@ -2240,7 +2241,7 @@
  # BR2_PACKAGE_SPAWN_FCGI is not set
  # BR2_PACKAGE_SPICE_PROTOCOL is not set
  # BR2_PACKAGE_SQUID is not set
-@@ -2370,32 +1911,17 @@
+@@ -2370,32 +1911,18 @@
  # BR2_PACKAGE_UDPCAST is not set
  # BR2_PACKAGE_ULOGD is not set
  # BR2_PACKAGE_USHARE is not set
@@ -2249,6 +2250,7 @@
 -# ussp-push needs a toolchain w/ wchar, threads, dynamic library
 -#
 +# BR2_PACKAGE_USSP_PUSH is not set
++BR2_PACKAGE_UWSGI=y
  # BR2_PACKAGE_VDE2 is not set
 -
 -#
@@ -2278,7 +2280,7 @@
  # BR2_PACKAGE_WPA_SUPPLICANT is not set
  # BR2_PACKAGE_WPAN_TOOLS is not set
  # BR2_PACKAGE_XINETD is not set
-@@ -2450,10 +1976,7 @@
+@@ -2450,10 +1977,7 @@
  #
  # -------------------------------------------------------
  #
@@ -2290,7 +2292,7 @@
  
  #
  # Real-Time
-@@ -2464,10 +1987,7 @@
+@@ -2464,10 +1988,7 @@
  #
  # Security
  #
@@ -2302,7 +2304,7 @@
  
  #
  # Shell and utilities
-@@ -2490,22 +2010,13 @@
+@@ -2490,22 +2011,13 @@
  # BR2_PACKAGE_GNUPG2 is not set
  # BR2_PACKAGE_INOTIFY_TOOLS is not set
  # BR2_PACKAGE_LOCKFILE_PROGS is not set
@@ -2328,7 +2330,7 @@
  # BR2_PACKAGE_XMLSTARLET is not set
  # BR2_PACKAGE_XXHASH is not set
  
-@@ -2519,15 +2030,9 @@
+@@ -2519,15 +2031,9 @@
  BR2_PACKAGE_AUDIT_ARCH_SUPPORTS=y
  # BR2_PACKAGE_AUDIT is not set
  # BR2_PACKAGE_CGROUPFS_MOUNT is not set
@@ -2346,7 +2348,7 @@
  # BR2_PACKAGE_DOCKER_ENGINE is not set
  
  #
-@@ -2542,32 +2047,20 @@
+@@ -2542,32 +2048,20 @@
  # BR2_PACKAGE_GETENT is not set
  # BR2_PACKAGE_HTOP is not set
  BR2_PACKAGE_INITSCRIPTS=y
@@ -2383,7 +2385,7 @@
  # BR2_PACKAGE_RUNC is not set
  # BR2_PACKAGE_SCRUB is not set
  # BR2_PACKAGE_SCRYPT is not set
-@@ -2579,30 +2072,21 @@
+@@ -2579,30 +2073,21 @@
  # BR2_PACKAGE_SWUPDATE is not set
  BR2_PACKAGE_SYSTEMD_ARCH_SUPPORTS=y
  # BR2_PACKAGE_TPM_TOOLS is not set
@@ -2420,7 +2422,7 @@
  # BR2_PACKAGE_UEMACS is not set
  
  #
-@@ -2625,8 +2109,8 @@
+@@ -2625,8 +2110,8 @@
  BR2_TARGET_ROOTFS_EXT2_EXTRA_BLOCKS=0
  BR2_TARGET_ROOTFS_EXT2_EXTRA_INODES=0
  BR2_TARGET_ROOTFS_EXT2_RESBLKS=0
@@ -2431,7 +2433,7 @@
  # BR2_TARGET_ROOTFS_EXT2_BZIP2 is not set
  # BR2_TARGET_ROOTFS_EXT2_LZMA is not set
  # BR2_TARGET_ROOTFS_EXT2_LZO is not set
-@@ -2644,10 +2128,6 @@
+@@ -2644,10 +2129,6 @@
  #
  # BR2_TARGET_AFBOOT_STM32 is not set
  # BR2_TARGET_BAREBOX is not set

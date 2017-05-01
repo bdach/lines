@@ -1,0 +1,85 @@
+Added environment variables to choose right -config script during cross compilation (suggested by Thomas)
+
+diff --git a/uwsgiconfig.py b/uwsgiconfig.py
+index 542d9e7..2695893 100644
+--- a/uwsgiconfig.py
++++ b/uwsgiconfig.py
+@@ -31,6 +31,9 @@ GCC = os.environ.get('CC', sysconfig.get_config_var('CC'))
+ if not GCC:
+     GCC = 'gcc'
+ 
++PCRE_CONFIG = os.environ.get('PCRE_CONFIG', 'pcre-config')
++XML2_CONFIG = os.environ.get('XML2_CONFIG', 'xml2-config')
++
+ def get_preprocessor():
+     if 'clang' in GCC:
+         return 'clang -xc core/clang_fake.c'
+@@ -546,6 +549,11 @@ def build_uwsgi(uc, print_only=False, gcll=None):
+             t.join()
+ 
+     print("*** uWSGI linking ***")
++    try:
++        if os.environ['LDFLAGS'] == '':
++            ldflags = []
++    except:
++        pass
+     ldline = "%s -o %s %s %s %s" % (GCC, bin_name, ' '.join(uniq_warnings(ldflags)),
+         ' '.join(map(add_o, gcc_list)), ' '.join(uniq_warnings(libs)))
+     print(ldline)
+@@ -1017,23 +1025,23 @@ class uConf(object):
+         # re-enable after pcre fix
+         if self.get('pcre'):
+             if self.get('pcre') == 'auto':
+-                pcreconf = spcall('pcre-config --libs')
++                pcreconf = spcall('%s --libs' % PCRE_CONFIG)
+                 if pcreconf:
+                     self.libs.append(pcreconf)
+-                    pcreconf = spcall("pcre-config --cflags")
++                    pcreconf = spcall("%s --cflags" % PCRE_CONFIG)
+                     self.cflags.append(pcreconf)
+                     self.gcc_list.append('core/regexp')
+                     self.cflags.append("-DUWSGI_PCRE")
+                     has_pcre = True
+ 
+             else:
+-                pcreconf = spcall('pcre-config --libs')
++                pcreconf = spcall('%s --libs' % PCRE_CONFIG)
+                 if pcreconf is None:
+                     print("*** libpcre headers unavailable. uWSGI build is interrupted. You have to install pcre development package or disable pcre")
+                     sys.exit(1)
+                 else:
+                     self.libs.append(pcreconf)
+-                    pcreconf = spcall("pcre-config --cflags")
++                    pcreconf = spcall("%s --cflags" % PCRE_CONFIG)
+                     self.cflags.append(pcreconf)
+                     self.gcc_list.append('core/regexp')
+                     self.cflags.append("-DUWSGI_PCRE")
+@@ -1248,10 +1256,10 @@ class uConf(object):
+ 
+         if self.get('xml'):
+             if self.get('xml') == 'auto':
+-                xmlconf = spcall('xml2-config --libs')
++                xmlconf = spcall('%s --libs' % XML2_CONFIG)
+                 if xmlconf:
+                     self.libs.append(xmlconf)
+-                    xmlconf = spcall("xml2-config --cflags")
++                    xmlconf = spcall("%s --cflags" % XML2_CONFIG)
+                     self.cflags.append(xmlconf)
+                     self.cflags.append("-DUWSGI_XML -DUWSGI_XML_LIBXML2")
+                     self.gcc_list.append('core/xmlconf')
+@@ -1262,13 +1270,13 @@ class uConf(object):
+                     self.gcc_list.append('core/xmlconf')
+                     report['xml'] = 'expat'
+             elif self.get('xml') == 'libxml2':
+-                xmlconf = spcall('xml2-config --libs')
++                xmlconf = spcall('%s --libs' % XML2_CONFIG)
+                 if xmlconf is None:
+                     print("*** libxml2 headers unavailable. uWSGI build is interrupted. You have to install libxml2 development package or use libexpat or disable XML")
+                     sys.exit(1)
+                 else:
+                     self.libs.append(xmlconf)
+-                    xmlconf = spcall("xml2-config --cflags")
++                    xmlconf = spcall("%s --cflags" % XML2_CONFIG)
+                     if xmlconf is None:
+                         print("*** libxml2 headers unavailable. uWSGI build is interrupted. You have to install libxml2 development package or use libexpat or disable XML")
+                         sys.exit(1)

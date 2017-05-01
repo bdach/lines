@@ -21,6 +21,10 @@ fi
 echo "applying default Raspberry Pi configuration"
 make -C ${BR2_ROOT_PATH} raspberrypi_defconfig || exit $?
 
+echo "adding uwsgi package"
+cp -R package ${BR2_ROOT_PATH}
+(cd ${BR2_ROOT_PATH}/package && patch -N Config.in Config.in.patch)
+
 echo "copying overlay directory"
 cp -R ../user-overlay ${BR2_ROOT_PATH}/..
 
