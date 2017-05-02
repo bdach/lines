@@ -122,6 +122,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Store files on the third partition
+MEDIA_ROOT="/files/"
+
 # Message passing framework settings
 MESSAGE_TAGS = {
         messages.DEBUG: 'alert-info',

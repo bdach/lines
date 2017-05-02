@@ -161,15 +161,306 @@ Nazwa hosta oraz wiadomość powitalna w systemie administracyjnym zostały zmie
 informować użytkowników, na którym systemie pracują. Dodatkowo, w celu ułatwienia korzystania
 z serwera SSH \texttt{dropbear} użytkownik \texttt{root} otrzymał hasło \texttt{LINSWlab3}.
 
+Narzędzia do zarządzania partycjami rodziny FAT zostały dodane do systemu poprzez wybranie opcji
+\centeredmenu{Target packages > Filesystem and flash utilities > \texttt{dosfstools}}
+a następnie podopcji
+\centeredmenu{Target packages > Filesystem and flash utilities > \texttt{dosfstools} > \texttt{fsck.fat}}
+\centeredmenu{Target packages > Filesystem and flash utilities > \texttt{dosfstools} > \texttt{mkfs.fat}}
+Analogiczne narzędzia dla systemów rodziny \emph{extended} zostały dodane poprzez zaznaczenie paczki
+\centeredmenu{Target packages > Filesystem and flash utilities > \texttt{e2fsprogs}}
+Po zaznaczeniu tej opcji zaznaczone zostało jeszcze narzędzie
+\centeredmenu{Target packages > Filesystem and flash utilities > \texttt{e2fsprogs} > \texttt{resize2fs}}
+w celu umożliwienia poprawienia ewentualnych błędów w partycjonowaniu dysków.
+
+Wybranym narzędziem do partycjonowania dla obrazu administracyjnego jest paczka
+\centeredmenu{Target packages > Hardware handling > \texttt{parted}}
+zamiast w celu umożliwienia transferu plików przez SSH dodany został program
+\centeredmenu{Target packages > Networking applications > \texttt{dropbear}}
+
 \subsection{Konfiguracja systemu użytkowego}
+
+W systemie użytkowym w celu uruchomienia aplikacji napisanej we frameworku Django dodano
+interpreter Pythona:
+\centeredmenu{Target packages > Interpreter languages and scripting > \texttt{python3}}
+a następnie moduł zewnętrzny Django:
+\centeredmenu{Target packages > Interpreter languages and scripting > External python modules > \texttt{python-django}}
+W celu wdrożenia aplikacji do Buildroota została dodana paczka z serwerem aplikacyjnym
+\texttt{uwsgi}, znajdująca się w menu
+\centeredmenu{Target packages > Networking applications > \texttt{uwsgi}}
+a następnie serwer WWW \texttt{nginx}:
+\centeredmenu{Target packages > Networking applications > \texttt{nginx}}
+razem z modułem współpracującym z \texttt{uwsgi}:
+\centeredmenu{Target packages > Networking applications > \texttt{nginx} > http server > \texttt{ngx\_http\_uwsgi\_module}}
 
 \subsection{Skrypt uruchomieniowy -- wybór systemu}
 
+Skrypt pozwalający na wybór systemu do uruchomienia na podstawie przycisków znajduje się
+w folderze \directory{files/boot.script} archiwum.
+
+\begin{lstlisting}[caption=Zawartość skryptu uruchomieniowego]
+gpio set 18
+sleep 1
+gpio clear 18
+if gpio input 10 || gpio input 22 || gpio input 27; then
+	gpio set 24
+	fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
+	fatload mmc 0:1 ${kernel_addr_r} zImage_admin
+	setenv bootargs "${bootargs_orig} console=ttyAMA0"
+	bootz ${kernel_addr_r} - ${fdt_addr_r}
+else
+	gpio set 23
+	fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
+	fatload mmc 0:1 ${kernel_addr_r} zImage_user
+	setenv bootargs "${bootargs_orig} console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
+	bootz ${kernel_addr_r} - ${fdt_addr_r}
+fi
+\end{lstlisting}
+Na początku skryptu zapalana jest na 1 sekundę dioda w kolorze białym, oznaczająca, że będzie
+wczytywany stan przycisków. Następnie następuje wczytanie stanu wszystkich przycisków; jeśli
+wciśnięty jest dowolny z nich, uruchamiany jest serwer administracyjny, zaś w przeciwnym
+przypadku -- system użytkownika. W obu przypadkach zapalane są diody sygnalizujące dokonany
+wybór (odpowiednio: czerwona oraz zielona)
+
+Oba systemy ładowane są z \emph{device tree} dla Raspberry Pi B. W obu przypadkach w opcjach
+rozruchu ustawiana jest nazwa tty, który będzie używany jako konsola (w tym przypadku, getty,
+z którego dane odczytywane są przez konwerter USB-UART).
+
+W przypadku systemu użytkowego dodana jest opcja rozruchu, informująca system że główny
+system plików znajduje się na drugiej partycji karty SD. Opcja \texttt{rootwait} dodatkowo
+informuje jądro, że system plików może nie być gotowy (zamontowany) w momencie uruchamiania
+systemu.
+
+System użytkowy jest kompilowany z użyciem nakładki. Nakładka ta zawiera: pliki aplikacji
+\texttt{filehost}, skrypty uruchomieniowe oraz pliki konfiguracyjne serwera WWW, a także
+zmodyfikowany plik \directory{/etc/fstab}. Plik ten zawiera nową linię, która odpowiada
+za automatyczne montowanie trzeciej partycji pod katalog \texttt{/files}:
+\begin{lstlisting}[caption=Linia dodana do pliku \directory{/etc/fstab}]
+# <file system>	<mount pt>	<type>	<options>	<dump>	<pass>
+/dev/mmcblk0p3	/files		ext2	defaults	0	2
+\end{lstlisting}
+
 \subsection{Realizacja serwera w Django}
+
+Aplikacja udostępniająca pliki znajduje się w katalogu
+\directory{files/user-overlay/var/www/filehost}.
+Składa się ona z głównego modułu \texttt{filehost} oraz modułu \texttt{files},
+odpowiedzialnego za faktyczne udostępnianie plików. Jest ona dodawana do systemu docelowego
+za pomocą systemu nakładek.
+
+\subsubsection{Model w bazie danych}
+
+Aplikacja nie udostępnia bezpośrednio plików z trzeciej partycji, lecz indeksuje dodane pliki
+z pomocą bazy danych SQLite. Poniżej znajduje się model encji pojedynczego pliku w bazie.
+
+\begin{lstlisting}[language=python,caption=Model encji \texttt{File}]
+class File(models.Model):
+    name = models.CharField(max_length=250)
+    content = models.FileField()
+
+    def __str__(self):
+        return self.name
+\end{lstlisting}
+
+Plik reprezentowany jest za pomocą kolumny \texttt{name}, zawierającej krótki opis pliku (do 250
+znaków) oraz \texttt{content}, zawierającej nazwę pliku na trzeciej partycji. Aplikacja jest
+skonfigurowana tak, aby wszystkie dodane pliki znajdowały się na niej, za pomocą ustawienia
+\begin{lstlisting}[language=bash,caption=Opcja w \directory{filehost/settings.py} ustawiająca lokalizację dodanych plików]
+# Store files on the third partition
+MEDIA_ROOT="/files/"
+\end{lstlisting}
+
+\subsubsection{Pobieranie plików}
+
+Pliki pobierane są przez wysłanie zapytania GET na adres \texttt{http://192.168.x.x/download?id=[ID]},
+gdzie \texttt{ID} stanowi identyfikator pliku w bazie. Pobieranie odbywa się poprzez otwarcie pliku,
+wczytanie jego zawartości, owinięcie jej w obiekt \texttt{HttpResponse} oraz modyfikacja
+nagłówka HTTP tak, aby przeglądarka zorientowała się, że powinna pobrać plik.
+\begin{lstlisting}[language=python,caption=Widok w \directory{files/views.py} odpowiadający za pobieranie plików]
+def download(request):
+    requested_file = get_object_or_404(File, pk = request.GET.get('id'))
+    requested_file.content.open()
+    response = HttpResponse(requested_file.content.read())
+    response['Content-Disposition'] = 'attachment; filename="{}"'
+    	.format(requested_file.content.name)
+    requested_file.content.close()
+    return response
+\end{lstlisting}
+
+\subsubsection{Autoryzacja}
+
+Do autoryzacji użytkowników wykorzystywane są wbudowane w Django mechanizmy i tabele \texttt{Users}
+i \texttt{Groups}. Dostarczają one: obsługę logowania i rejestracji, a także sesyjność z użyciem
+mechanizmu ciasteczek.
+
+Za logowanie oraz rejestrację odpowiedzialne są widoki \texttt{LogInView} oraz
+\texttt{RegisterView}. Korzystają one z wbudowanych w Django funkcji.
+
+Dostępność do chronionych stron (np. strony odpowiadającej za wysyłanie plików) jest regulowana
+poprzez wbudowany w Django komponent \texttt{LoginRequiredMixin}.
+
+\subsubsection{Dodawanie plików}
+
+Dodawanie plików jest osiągalne dla zalogowanych użytkowników poprzez wysłanie zapytania
+na adres \texttt{http://192.168.x.x/upload}, gdzie w sekcji POST znajduje się żądany opis,
+zaś w sekcji FILES -- zawartość dodawanego pliku.
+
+\begin{lstlisting}[language=python,caption=Widok odpowiedzialny za dodawanie pliku]
+class UploadView(LoginRequiredMixin, View):
+    login_url = '/login'
+
+    def post(self, request):
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'File uploaded successfully.')
+        else:
+            messages.error(request, 'There was an error uploading the file.')
+        return redirect('index')
+\end{lstlisting}
+
+\subsubsection{Interfejs użytkownika}
+
+Interfejs został zrealizowany za pomocą wbudowanego w Django systemu szablonów oraz
+formularzy. Pozwalają one na łatwe łączenie widoków z zawartością HTML. Używane szablony
+znajdują się w katalogu \directory{files/templates/files}.
+
+\begin{lstlisting}[language=html,caption=Przykład zastosowania szablonów i formularzy -- formularz dodawania plików]
+{% if user.is_authenticated %}
+<div class="panel panel-default panel-primary">
+	<div class="panel-heading">Upload new file</div>
+	<form action="{% url "upload" %}" method="post" enctype="multipart/form-data">
+		<div class="panel-body">
+			{% csrf_token %}
+			{{ form.as_p }}
+		</div>
+		<div class="panel-footer">
+			<input type="submit" class="btn btn-success" value="Upload" />
+		</div>
+	</form>
+</div>
+{% endif %}
+\end{lstlisting}
+
+W powyższym przykładzie znajduje się formularz dodawania plików na głównej stronie. 
+Owijająca fragment HTML klauzula \texttt{if} sprawdza, czy użytkownik zalogował się na stronę.
+Atrybut \texttt{action} formularza zawiera wstawkę, która kieruje wynik formularza do widoku
+\texttt{Upload}, co zapobiega wklejaniom w HTML łączy bezpośrednich. Django wspiera również
+dodawanie tokenów zapobiegających przed atakami typu CSRF (ang. \emph{Cross-Site Request
+Forgery}). Sam formularz renderowany jest automatycznie na podstawie modelu obiektu:
+
+\begin{lstlisting}[language=python,caption=Przykładowy formularz -- dodawanie plików]
+class UploadFileForm(forms.ModelForm):
+    error_css_class = 'error'
+
+    class Meta:
+        model = File
+        fields = ['name', 'content']
+        widgets = {
+                'name': forms.TextInput(attrs={'class': 'form-control'})
+        }
+\end{lstlisting}
+
+Szablon wiązany jest z formularzem poprzez widok, który przekazuje do renderera stron tzw.
+kontekst, zawierający wszystkie elementy, do których odnosi się w znacznikach \texttt{\{\{ \}\}}
+szablon. Umożliwia to m.in. natychmiastową implementację paginacji (dzielenia listy plików
+na wiele podstron, z ograniczoną ilością rekordw na każdej podstronie):
+\begin{lstlisting}[language=python,caption=Widok łączący formularz oraz szablon]
+class IndexView(View):
+    def get(self, request):
+        file_list = File.objects.all()
+        paginator = Paginator(file_list, 25)
+
+        page = request.GET.get('page')
+        try:
+            files = paginator.page(page)
+        except PageNotAnInteger:
+            files = paginator.page(1)
+        except EmptyPage:
+            files = paginator.page(paginator.num_pages)
+
+        form = UploadFileForm()
+
+        return render(request, 'files/index.html', 
+		{
+			"files": files,
+			"form": form,
+			"messages": messages.get_messages(request) 
+		}
+	)
+\end{lstlisting}
+Wygląd stron został ulepszony z pomocą frameworka Bootstrap \cite{bootstrap}, który dostarcza
+gotowe arkusze stylów oraz komponenty w JavaScript.
 
 \subsection{Konfiguracja środowiska uruchomieniowego serwera}
 
+Aby serwer był uruchamiany z momencie startu systemu, dodany został \emph{init script}
+uruchamiający uWSGI z odpowiednią konfiguracją:
+\begin{lstlisting}[language=bash,caption=Zawartość pliku \directory{/etc/init.d/S49filehost}]
+#!/bin/sh
+
+case $1 in
+	start)
+		uwsgi --ini /var/www/filehost/uwsgi.ini
+		;;
+	stop)
+		uwsgi --stop /tmp/filehost-master.pid
+		;;
+esac
+\end{lstlisting}
+Serwer uWSGI został skonfigurowany za pomocą następującego pliku \texttt{.ini}.
+\begin{lstlisting}[caption=Zawartość pliku \directory{/var/www/filehost/uwsgi.ini}]
+[uwsgi]
+
+module=filehost.wsgi		 # nazwa modulu Pythona zawierajacego konfiguracje wsgi
+master=true			 # czy instancja uWSGI jest instancja glowna
+pidfile=/tmp/filehost-master.pid # lokalizacja pliku zawierajacego PIDy procesow serwera
+socket=/var/www/filehost.sock    # plik gniazda, za posrednictwem ktorego odbywac sie
+				 # bedzie polaczenie
+processes=5			 # liczba procesow uwsgi
+harakiri=20			 # maksymalne trwanie zadania w sekundach
+max-requests=5000		 # maksymalna liczba zadan, po ktorych procesy powinny
+				 # zostac przeladowane
+vacuum=true			 # czyszczenie po zakonczeniu
+daemonize=/var/log/filehost.log	 # uruchom jako daemon, wypisz log do pliku
+buffer-size=32768		 # rozmiar bufora dla zadan
+\end{lstlisting}
+
+Aby połączyć plik gniazda stworzony przez uWSGI z serwerem WWW hostowanym przez \texttt{nginx},
+dodany został do katalogu \directory{/etc/nginx/sites-enabled} plik \texttt{filehost}.
+\begin{lstlisting}[caption=Zawartość pliku \directory{/etc/nginx/sites-enabled/filehost}]
+# nginx configuration for the FileHost application
+
+server {
+	listen 0.0.0.0:80 default_server;
+	listen [::]:80 default_server;
+
+	root /var/www;
+
+	server_name filehost;
+
+	# Redirect requests to the root folder to the uWSGI socket file
+	location / {
+		include uwsgi_params;
+		uwsgi_pass unix:/var/www/filehost.sock;
+	}
+
+	# Serve static files here
+	location /static {
+		autoindex on;
+		alias /var/www/static;
+	}
+}
+\end{lstlisting}
+Według powyższej konfiguracji, wszystkie żądania HTTP do folderu innego niż \texttt{/static}
+są przekierowywane do uWSGI. Pliki statyczne są serwowane wyłącznie przez \texttt{nginx},
+co zapewnia większą wydajność.
+
 \begin{thebibliography}{9}
+	\bibitem{bootstrap}
+		Bootstrap,
+		\url{https://getbootstrap.com/},
+		MIT
+
 	\bibitem{uwsgi-package}
 		Andrea Cappelli,
 		\emph{[1/1] New package: uwsgi},
