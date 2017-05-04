@@ -74,6 +74,10 @@ Trzecie zadanie laboratoryjne składało się z następujących kroków:
 		dodawanie nowych plików na tą partycję przez zalogowanych użytkowników,
 	\item przygotowanie skryptu bootloadera, który umożliwi wybór uruchamianego systemu
 		w zależności od stanu wciśniętych przycisków na dostarczonej płytce.
+		Początkowo, jeśli nie został wciśnięty żadny przycisk, uruchamiany był system
+		użytkowy, a w przeciwnym przypadku -- system administracyjny. Na drugiej sesji
+		laboratoryjnej skrypt został poszerzony o możliwość uruchamiania systemu
+		ratunkowego.
 \end{enumerate}
 
 \section{Procedura odtworzenia projektu z załączonego archiwum}
@@ -137,9 +141,20 @@ partycji. Skompresowany lik z obrazem \texttt{rootfs.ext4.gz} można skopiować 
 podręcznej płytki (tj. do \texttt{initramfs}) za pośrednictwem SSH. Po przesłaniu wypakowanie
 na drugą partycję można dokonać poleceniem
 \begin{lstlisting}
-# gunzip rootfs.ext4.gz | dd of=/dev/mmcblk0p2 bs=2M
+# gunzip -c rootfs.ext4.gz | dd of=/dev/mmcblk0p2 bs=2M
 \end{lstlisting}
-Po wykonaniu tych kroków system użytkowy powinien być gotowy do działania.
+
+\subsection{Instalacja systemu}
+
+Po wykonaniu powyższych kroków, system użytkowy może zostać uruchomiony. W celu instalacji
+systemu współdzielenia plików, należy z konta administratora wykonać skrypt
+\begin{lstlisting}
+# /var/www/filehost/install.sh
+\end{lstlisting}
+Skrypt ten przygotuje bazę SQLite do działania aplikacji, gromadzi pliki CSS i JS
+w wyznaczone miejsca, a następnie dodaje skrypt startowy dla aplikacji (tak, aby działała
+ona od uruchomienia systemu) do katalogu \directory{/etc/init.d} i uruchamia aplikację
+\texttt{filehost}.
 
 \section{Opis rozwiązania}
 
@@ -180,13 +195,20 @@ zamiast w celu umożliwienia transferu plików przez SSH dodany został program
 \subsection{Konfiguracja systemu użytkowego}
 
 W systemie użytkowym w celu uruchomienia aplikacji napisanej we frameworku Django dodano
-interpreter Pythona:
+interpreter Pythona ze wsparciem SQLite:
 \centeredmenu{Target packages > Interpreter languages and scripting > \texttt{python3}}
+\centeredmenu{Target packages > Interpreter languages and scripting > \texttt{python3} > core \texttt{python3} modules > \texttt{sqlite} module}
 a następnie moduł zewnętrzny Django:
 \centeredmenu{Target packages > Interpreter languages and scripting > External python modules > \texttt{python-django}}
 W celu wdrożenia aplikacji do Buildroota została dodana paczka z serwerem aplikacyjnym
 \texttt{uwsgi}, znajdująca się w menu
 \centeredmenu{Target packages > Networking applications > \texttt{uwsgi}}
+oraz biblioteki będące jej zależnościami:
+\centeredmenu{Target packages > Libraries > Crypto > \texttt{openssl}}
+\centeredmenu{Target packages > Libraries > JSON/XML > \texttt{jansson}}
+\centeredmenu{Target packages > Libraries > Other > \texttt{libcap}}
+\centeredmenu{Target packages > Libraries > System tools > \texttt{util-linux}}
+\centeredmenu{Target packages > Libraries > System tools > \texttt{util-linux} > \texttt{libuuid}}
 a następnie serwer WWW \texttt{nginx}:
 \centeredmenu{Target packages > Networking applications > \texttt{nginx}}
 razem z modułem współpracującym z \texttt{uwsgi}:
@@ -201,19 +223,23 @@ w folderze \directory{files/boot.script} archiwum.
 gpio set 18
 sleep 1
 gpio clear 18
-if gpio input 10 || gpio input 22 || gpio input 27; then
-	gpio set 24
-	fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
-	fatload mmc 0:1 ${kernel_addr_r} zImage_admin
-	setenv bootargs "${bootargs_orig} console=ttyAMA0"
-	bootz ${kernel_addr_r} - ${fdt_addr_r}
+if gpio input 10; then
+        gpio set 24
+        fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
+        fatload mmc 0:1 ${kernel_addr_r} zImage_admin
+        setenv bootargs "${bootargs_orig} console=ttyAMA0"
+elif gpio input 22; then
+        gpio set 17
+        fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b_rescue.dtb
+        fatload mmc 0:1 ${kernel_addr_r} zImage_rescue
+        setenv bootargs "${bootargs_orig} console=ttyAMA0"
 else
-	gpio set 23
-	fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
-	fatload mmc 0:1 ${kernel_addr_r} zImage_user
-	setenv bootargs "${bootargs_orig} console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
-	bootz ${kernel_addr_r} - ${fdt_addr_r}
+        gpio set 23
+        fatload mmc 0:1 ${fdt_addr_r} bcm2708-rpi-b.dtb
+        fatload mmc 0:1 ${kernel_addr_r} zImage_user
+        setenv bootargs "${bootargs_orig} console=ttyAMA0 root=/dev/mmcblk0p2 rootwait"
 fi
+bootz ${kernel_addr_r} - ${fdt_addr_r}
 \end{lstlisting}
 Na początku skryptu zapalana jest na 1 sekundę dioda w kolorze białym, oznaczająca, że będzie
 wczytywany stan przycisków. Następnie następuje wczytanie stanu wszystkich przycisków; jeśli
@@ -236,7 +262,7 @@ zmodyfikowany plik \directory{/etc/fstab}. Plik ten zawiera nową linię, która
 za automatyczne montowanie trzeciej partycji pod katalog \texttt{/files}:
 \begin{lstlisting}[caption=Linia dodana do pliku \directory{/etc/fstab}]
 # <file system>	<mount pt>	<type>	<options>	<dump>	<pass>
-/dev/mmcblk0p3	/files		ext2	defaults	0	2
+/dev/mmcblk0p3	/files		ext4	defaults	0	2
 \end{lstlisting}
 
 \subsection{Realizacja serwera w Django}
@@ -400,7 +426,7 @@ uruchamiający uWSGI z odpowiednią konfiguracją:
 
 case $1 in
 	start)
-		uwsgi --ini /var/www/filehost/uwsgi.ini
+		(cd /var/www/filehost && uwsgi --ini uwsgi.ini)
 		;;
 	stop)
 		uwsgi --stop /tmp/filehost-master.pid
@@ -449,6 +475,28 @@ server {
 		autoindex on;
 		alias /var/www/static;
 	}
+}
+\end{lstlisting}
+Dodatkowo główny plik konfiguracyjny \directory{/etc/nginx/nginx.conf} został zmieniony tak,
+aby uwzględniał wszystkie pliki z folderu \directory{sites\_enabled}:
+\begin{lstlisting}[caption=Zawartość pliku \directory{/etc/nginx/nginx.conf}]
+user  www-data;
+worker_processes  2;
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    include /etc/nginx/sites-enabled/*;
 }
 \end{lstlisting}
 Według powyższej konfiguracji, wszystkie żądania HTTP do folderu innego niż \texttt{/static}
