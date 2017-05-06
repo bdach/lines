@@ -151,7 +151,7 @@ systemu współdzielenia plików, należy z konta administratora wykonać skrypt
 \begin{lstlisting}
 # /var/www/filehost/install.sh
 \end{lstlisting}
-Skrypt ten przygotuje bazę SQLite do działania aplikacji, gromadzi pliki CSS i JS
+Skrypt ten przygotowuje bazę SQLite do działania aplikacji, gromadzi pliki CSS i JS
 w wyznaczone miejsca, a następnie dodaje skrypt startowy dla aplikacji (tak, aby działała
 ona od uruchomienia systemu) do katalogu \directory{/etc/init.d} i uruchamia aplikację
 \texttt{filehost}.
@@ -243,13 +243,14 @@ bootz ${kernel_addr_r} - ${fdt_addr_r}
 \end{lstlisting}
 Na początku skryptu zapalana jest na 1 sekundę dioda w kolorze białym, oznaczająca, że będzie
 wczytywany stan przycisków. Następnie następuje wczytanie stanu wszystkich przycisków; jeśli
-wciśnięty jest dowolny z nich, uruchamiany jest serwer administracyjny, zaś w przeciwnym
-przypadku -- system użytkownika. W obu przypadkach zapalane są diody sygnalizujące dokonany
-wybór (odpowiednio: czerwona oraz zielona)
+nie wciśnięty jest żaden, ładowany jest system użytkowy; jeśli jeden z dwóch dolnych
+przycisków płytki, ładowany jest system administracyjny lub ratunkowy. Wybór jest wyświetlany
+za pomocą zapalonej odpowiedniej diody.
 
-Oba systemy ładowane są z \emph{device tree} dla Raspberry Pi B. W obu przypadkach w opcjach
-rozruchu ustawiana jest nazwa tty, który będzie używany jako konsola (w tym przypadku, getty,
-z którego dane odczytywane są przez konwerter USB-UART).
+Systemy: administracyjny i użytkowy ładowane są z \emph{device tree} dla Raspberry Pi B
+wygenerowanym przez Buildroota, zaś system ratunkowy -- ze starszą wersją drzewa.
+We wszystkich przypadkach w opcjach rozruchu ustawiana jest nazwa tty, który będzie używany
+jako konsola (w tym przypadku, getty, z którego dane odczytywane są przez konwerter USB-UART).
 
 W przypadku systemu użytkowego dodana jest opcja rozruchu, informująca system że główny
 system plików znajduje się na drugiej partycji karty SD. Opcja \texttt{rootwait} dodatkowo
@@ -273,7 +274,7 @@ Składa się ona z głównego modułu \texttt{filehost} oraz modułu \texttt{fil
 odpowiedzialnego za faktyczne udostępnianie plików. Jest ona dodawana do systemu docelowego
 za pomocą systemu nakładek.
 
-\subsubsection{Model w bazie danych}
+\subsubsection{Model bazy danych}
 
 Aplikacja nie udostępnia bezpośrednio plików z trzeciej partycji, lecz indeksuje dodane pliki
 z pomocą bazy danych SQLite. Poniżej znajduje się model encji pojedynczego pliku w bazie.
