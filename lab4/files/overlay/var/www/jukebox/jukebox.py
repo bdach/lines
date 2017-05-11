@@ -1,9 +1,15 @@
 from flask import abort, Flask, redirect, render_template, request, url_for
+
 import vlc
 import os
+
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
+
 app = Flask(__name__)
 
-root_dir = "/media/dachb/Dokumenty/Muzyka"
+root_dir = "/music"
 
 class JukeboxQueue:
     queue = []
@@ -130,5 +136,7 @@ def now_playing():
             current=get_filename(jukebox.current))
 
 if __name__ == "__main__":
-    app.run()
+    server = HTTPServer(WSGIContainer(app))
+    server.listen(80)
+    IOLoop.instance().start()
 
