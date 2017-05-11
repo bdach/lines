@@ -7,6 +7,8 @@ from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 
+import RPi.GPIO as GPIO
+
 app = Flask(__name__)
 
 root_dir = "/music"
@@ -136,6 +138,12 @@ def now_playing():
             current=get_filename(jukebox.current))
 
 if __name__ == "__main__":
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(10, GPIO.IN)
+    GPIO.add_event_detect(10, GPIO.FALLING, callback=jukebox.pause, bouncetime=200)
+    GPIO.setup(22, GPIO.IN)
+    GPIO.add_event_detect(22, GPIO.FALLING, callback=jukebox.skip, bouncetime=200)
+
     server = HTTPServer(WSGIContainer(app))
     server.listen(80)
     IOLoop.instance().start()

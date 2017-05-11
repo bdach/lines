@@ -108,11 +108,7 @@ def find_lib():
     dll = None
     plugin_path = None
     if sys.platform.startswith('linux'):
-        p = find_library('vlc')
-        try:
-            dll = ctypes.CDLL(p)
-        except OSError:  # may fail
-            dll = ctypes.CDLL('libvlc.so.5')
+        dll = ctypes.CDLL('libvlc.so.5')
     elif sys.platform.startswith('win'):
         libname = 'libvlc.dll'
         p = find_library(libname)
