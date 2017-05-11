@@ -1,0 +1,8 @@
+<span id="slide-out-contents">
+	<li>
+		<h5 class="center"><i class="material-icons">queue_music</i> Currently in queue</h5>
+	</li>
+	{% for queued in queue %}
+	<li><a>{{ queued }}</a></li>
+	{% endfor %}
+</span>

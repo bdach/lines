@@ -49,12 +49,14 @@
 			</nav>
 		</header>
 		<ul id="slide-out" class="side-nav fixed">
-			<li>
-				<h5 class="center"><i class="material-icons">queue_music</i> Currently in queue</h5>
-			</li>
-			{% for queued in queue %}
-			<li><a>{{ queued }}</a></li>
-			{% endfor %}
+			<span id="slide-out-contents">
+				<li>
+					<h5 class="center"><i class="material-icons">queue_music</i> Currently in queue</h5>
+				</li>
+				{% for queued in queue %}
+				<li><a>{{ queued }}</a></li>
+				{% endfor %}
+			</span>
 		</ul>
 		<main>
 			<div class="container">
@@ -88,12 +90,11 @@
 		<footer class="page-footer indigo">
 			<div class="container">
 				<div class="row">
-					<div class="col s12 center white-text">
+					<div id="now-playing" class="col s12 center white-text">
 						{{ current }}
 					</div>
 				</div>
 				<div class="row">
-					<div class="col s12 center">
 					<div class="col s12 center">
 						<a class="btn-floating btn-large waves-effect waves-light orange" href="{{ url_for('.pause') }}">
 							<i class="material-icons">{{ icon }}</i>
@@ -106,10 +107,30 @@
 			</div>
 		</footer>
 
-		<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-		<script type="text/javascript" src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
-		<script type="text/javascript">
-			$(".button-collapse").sideNav();
-		</script>
+<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
+<script type="text/javascript">
+$(".button-collapse").sideNav();
+function update() {
+	$.ajax({
+		url: "{{ url_for('.update_queue') }}",
+		cache: false
+	})
+	.done(function(html) {
+		$("#slide-out-contents").replaceWith(html)
+	});
+	$(".button-collapse").sideNav();
+
+	$.ajax({
+		url: "{{ url_for('.now_playing') }}",
+		cache: false
+	})
+	.done(function(html) {
+		$("#now-playing").replaceWith(html)
+	});
+}
+
+setInterval(update, 5000)
+</script>
 	</body>
 </html>

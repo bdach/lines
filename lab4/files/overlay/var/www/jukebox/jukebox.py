@@ -51,6 +51,8 @@ class VlcJukebox:
     def song_ended_callback(self, event):
         if len(self.queue) > 0:
             self.player = self.instance.media_player_new()
+            event_manager = self.player.event_manager()
+            event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.song_ended_callback)
             self.new_song()
         else:
             self.queue_ended = True
@@ -117,5 +119,16 @@ def skip():
     jukebox.skip()
     return redirect(request.referrer)
 
+@app.route("/queue")
+def update_queue():
+    return render_template("queue.html",
+                queue=[get_filename(path) for path in queue.get_contents()])
+
+@app.route("/now")
+def now_playing():
+    return render_template("now.html",
+            current=get_filename(jukebox.current))
+
 if __name__ == "__main__":
     app.run()
+
