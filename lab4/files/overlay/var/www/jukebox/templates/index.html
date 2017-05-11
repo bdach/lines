@@ -34,7 +34,7 @@
 		</style>
 
 		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>Jukebox</title>
+		<title>MP3 Jukebox</title>
 	</head>
 	<body>
 		<header>
@@ -42,7 +42,7 @@
 				<div class="nav-wrapper indigo">
 					<div class="container">
 						<a href="#" data-activates="slide-out" class="button-collapse"><i class="material-icons">menu</i></a>
-						<a href="{{ url_for('.view_tracks') }}" class="brand-logo">Jukebox</a>
+						<a href="{{ url_for('.view_tracks') }}" class="brand-logo">MP3 Jukebox</a>
 						<a class="right">{{ folder }}</a>
 					</div>
 				</div>
@@ -60,7 +60,6 @@
 		</ul>
 		<main>
 			<div class="container">
-
 				<div class="row">
 					<div class="col s12 m6">
 						<ul class="collection with-header">
@@ -82,6 +81,26 @@
 									<div>{{ file }} <i class="material-icons orange-text secondary-content">playlist_add</i></div>
 							</a></li>
 							{% endfor %}
+							<li class="collection-item">
+								<form class="row valign-wrapper" method="POST" enctype="multipart/form-data" action="{{ url_for('.upload', folder=folder) }}">
+									<div class="col s10">
+										<div class="file-field input-field">
+											<div class="btn orange">
+												<span>File</span>
+												<input type="file" name="track">
+											</div>
+											<div class="file-path-wrapper">
+												<input class="file-path validate" type="text" required>
+											</div>
+										</div>
+									</div>
+									<div class="col s2">
+										<button class="btn-floating orange waves-effect waves-light right" type="submit">
+											<i class="material-icons">send</i>
+										</button>
+									</div>
+								</form>
+							</li>
 						</ul>
 					</div>
 				</div>
@@ -96,11 +115,17 @@
 				</div>
 				<div class="row">
 					<div class="col s12 center">
+						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.volume_ctrl', direction='down') }}">
+							<i class="material-icons white-text">volume_down</i>
+						</a>
 						<a class="btn-floating btn-large waves-effect waves-light orange" href="{{ url_for('.pause') }}">
 							<i class="material-icons">{{ icon }}</i>
 						</a>
 						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.skip') }}">
 							<i class="material-icons white-text">skip_next</i>
+						</a>
+						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.volume_ctrl', direction='up') }}">
+							<i class="material-icons white-text">volume_up</i>
 						</a>
 					</div>
 				</div>

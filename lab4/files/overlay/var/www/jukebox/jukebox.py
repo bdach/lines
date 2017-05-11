@@ -1,11 +1,9 @@
 from flask import abort, Flask, redirect, render_template, request, url_for
+from werkzeug.utils import secure_filename
 
-import vlc
+import atexit
 import os
-
-from tornado.wsgi import WSGIContainer
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
+import vlc
 
 import RPi.GPIO as GPIO
 
@@ -80,6 +78,14 @@ class VlcJukebox:
         else:
             return "play_arrow"
 
+    def volume_down(self):
+        volume = max(0, self.player.audio_get_volume() - 10)
+        self.player.audio_set_volume(volume)
+
+    def volume_up(self):
+        volume = min(100, self.player.audio_get_volume() + 10)
+        self.player.audio_set_volume(volume)
+
 queue = JukeboxQueue()
 jukebox = VlcJukebox(queue)
 
@@ -137,6 +143,29 @@ def now_playing():
     return render_template("now.html",
             current=get_filename(jukebox.current))
 
+@app.route("/volume/<direction>")
+def volume_ctrl(direction):
+    if direction == "up":
+        jukebox.volume_up()
+    elif direction == "down":
+        jukebox.volume_down()
+    else:
+        abort(404)
+    return redirect(request.referrer)
+
+@app.route("/upload/<path:folder>", methods=["POST"])
+def upload(folder):
+    real_path = os.path.join(root_dir, folder)
+    if not os.path.isdir(real_path):
+        abort(404)
+    if "track" not in request.files:
+        return redirect(request.referrer)
+    track = request.files["track"]
+    if is_mp3_file(track.filename):
+        filename = secure_filename(track.filename)
+        track.save(os.path.join(real_path, filename))
+        return redirect(request.referrer)
+
 if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(10, GPIO.IN)
@@ -144,7 +173,6 @@ if __name__ == "__main__":
     GPIO.setup(22, GPIO.IN)
     GPIO.add_event_detect(22, GPIO.FALLING, callback=jukebox.skip, bouncetime=200)
 
-    server = HTTPServer(WSGIContainer(app))
-    server.listen(80)
-    IOLoop.instance().start()
+    atexit.register(GPIO.cleanup)
+    app.run(host='0.0.0.0', port=8000)
 
