@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='css/materialize.min.css') }}"  media="screen,projection"/>
+
+		<style>
+		footer {
+			width: 100%;
+			position: fixed;
+			left: 0px;
+			bottom: 0px;
+		}
+		
+		main {
+			margin-bottom: 150px;
+		}
+
+		header, main, footer {
+			padding-left: 300px;
+		}
+
+		.side-nav li > a {
+			height: auto;
+			padding: 8px 32px;
+			line-height: 24px;
+		}
+		
+		@media only screen and (max-width : 992px) {
+			header, main, footer {
+				padding-left: 0;
+			}
+		}
+		</style>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>Jukebox</title>
+	</head>
+	<body>
+		<header>
+			<nav>
+				<div class="nav-wrapper indigo">
+					<div class="container">
+						<a href="#" data-activates="slide-out" class="button-collapse"><i class="material-icons">menu</i></a>
+						<a href="{{ url_for('.view_tracks') }}" class="brand-logo">Jukebox</a>
+						<a class="right">{{ folder }}</a>
+					</div>
+				</div>
+			</nav>
+		</header>
+		<ul id="slide-out" class="side-nav fixed">
+			<li>
+				<h5 class="center"><i class="material-icons">queue_music</i> Currently in queue</h5>
+			</li>
+			{% for queued in queue %}
+			<li><a>{{ queued }}</a></li>
+			{% endfor %}
+		</ul>
+		<main>
+			<div class="container">
+
+				<div class="row">
+					<div class="col s12 m6">
+						<ul class="collection with-header">
+							<li class="collection-header"><h5>Available directories</h5></li>
+							{% if root %}
+							<li class="collection-item"><a href="{{ url_for('.view_tracks', folder=root) }}">Go back</a></li>
+							{% endif %}
+							{% for dir in dirnames %}
+							<li class="collection-item"><a href="{{ url_for('.view_tracks', folder='/'.join([folder, dir])) }}">{{ dir }}</a></li>
+							{% endfor %}
+						</ul>
+					</div>
+
+					<div class="col s12 m6">
+						<ul class="collection with-header">
+							<li class="collection-header"><h5>Tracks</h5></li>
+							{% for file in filenames %}
+							<li class="collection-item"><a href="{{ url_for('.play_file', filename='/'.join([folder, file])) }}">
+									<div>{{ file }} <i class="material-icons orange-text secondary-content">playlist_add</i></div>
+							</a></li>
+							{% endfor %}
+						</ul>
+					</div>
+				</div>
+			</div>
+		</main>
+		<footer class="page-footer indigo">
+			<div class="container">
+				<div class="row">
+					<div class="col s12 center white-text">
+						{{ current }}
+					</div>
+				</div>
+				<div class="row">
+					<div class="col s12 center">
+					<div class="col s12 center">
+						<a class="btn-floating btn-large waves-effect waves-light orange" href="{{ url_for('.pause') }}">
+							<i class="material-icons">{{ icon }}</i>
+						</a>
+						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.skip') }}">
+							<i class="material-icons white-text">skip_next</i>
+						</a>
+					</div>
+				</div>
+			</div>
+		</footer>
+
+		<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+		<script type="text/javascript" src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
+		<script type="text/javascript">
+			$(".button-collapse").sideNav();
+		</script>
+	</body>
+</html>
