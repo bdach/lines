@@ -8,8 +8,8 @@ import vlc
 import RPi.GPIO as GPIO
 
 app = Flask(__name__)
-
 root_dir = "/music"
+volume_button_on = False
 
 class JukeboxQueue:
     queue = []
@@ -166,12 +166,29 @@ def upload(folder):
         track.save(os.path.join(real_path, filename))
         return redirect(request.referrer)
 
+def pause_button_callback(channel):
+    if volume_button_on:
+        jukebox.volume_up()
+    else:
+        jukebox.pause()
+
+def skip_button_callback(channel):
+    if volume_button_on:
+        jukebox.volume_down()
+    else:
+        jukebox.skip()
+
+def volume_toggle_callback(channel):
+    volume_button_on = not volume_button_on
+
 if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(10, GPIO.IN)
-    GPIO.add_event_detect(10, GPIO.FALLING, callback=jukebox.pause, bouncetime=200)
+    GPIO.add_event_detect(10, GPIO.FALLING, callback=pause_button_callback, bouncetime=200)
     GPIO.setup(22, GPIO.IN)
-    GPIO.add_event_detect(22, GPIO.FALLING, callback=jukebox.skip, bouncetime=200)
+    GPIO.add_event_detect(22, GPIO.FALLING, callback=skip_button_callback, bouncetime=200)
+    GPIO.setup(27, GPIO.IN)
+    GPIO.add_event_detect(27, GPIO.BOTH, callback=volume_toggle_callback, bouncetime=200)
 
     atexit.register(GPIO.cleanup)
     app.run(host='0.0.0.0', port=8000)

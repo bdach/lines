@@ -1,5 +1,5 @@
 --- default.config	2017-05-11 21:39:09.816779124 +0200
-+++ ready.config	2017-05-11 22:53:26.530739892 +0200
++++ ready.config	2017-05-17 21:38:05.900665629 +0200
 @@ -9,6 +9,7 @@
  BR2_HOST_GCC_AT_LEAST_4_8=y
  BR2_HOST_GCC_AT_LEAST_4_9=y
@@ -2006,7 +2006,7 @@
  
  #
  # Miscellaneous
-@@ -2080,45 +1695,24 @@
+@@ -2080,50 +1695,30 @@
  # domoticz needs lua >= 5.2 and a toolchain w/ C++, threads, wchar, dynamic library
  #
  # BR2_PACKAGE_EMPTY is not set
@@ -2059,7 +2059,13 @@
  # BR2_PACKAGE_AIRCRACK_NG is not set
  # BR2_PACKAGE_APACHE is not set
  # BR2_PACKAGE_ARGUS is not set
-@@ -2131,14 +1725,8 @@
+ # BR2_PACKAGE_ARPTABLES is not set
+ # BR2_PACKAGE_ATFTP is not set
++# BR2_PACKAGE_AUTOSSH is not set
+ # BR2_PACKAGE_AVAHI is not set
+ # BR2_PACKAGE_AXEL is not set
+ # BR2_PACKAGE_BABELD is not set
+@@ -2131,14 +1726,8 @@
  # BR2_PACKAGE_BATCTL is not set
  # BR2_PACKAGE_BCUSDK is not set
  # BR2_PACKAGE_BIND is not set
@@ -2076,7 +2082,7 @@
  # BR2_PACKAGE_BMON is not set
  # BR2_PACKAGE_BOA is not set
  # BR2_PACKAGE_BRIDGE_UTILS is not set
-@@ -2148,10 +1736,7 @@
+@@ -2148,10 +1737,7 @@
  # BR2_PACKAGE_CANNELLONI is not set
  # BR2_PACKAGE_CHRONY is not set
  # BR2_PACKAGE_CIVETWEB is not set
@@ -2088,7 +2094,21 @@
  
  #
  # connman-gtk needs libgtk3 and a glibc or uClibc toolchain w/ wchar, threads, resolver, dynamic library
-@@ -2177,14 +1762,8 @@
+@@ -2165,7 +1751,12 @@
+ # BR2_PACKAGE_DHCPDUMP is not set
+ # BR2_PACKAGE_DNSMASQ is not set
+ # BR2_PACKAGE_DRBD_UTILS is not set
+-# BR2_PACKAGE_DROPBEAR is not set
++BR2_PACKAGE_DROPBEAR=y
++BR2_PACKAGE_DROPBEAR_CLIENT=y
++# BR2_PACKAGE_DROPBEAR_DISABLE_REVERSEDNS is not set
++BR2_PACKAGE_DROPBEAR_SMALL=y
++# BR2_PACKAGE_DROPBEAR_WTMP is not set
++# BR2_PACKAGE_DROPBEAR_LASTLOG is not set
+ # BR2_PACKAGE_EBTABLES is not set
+ 
+ #
+@@ -2177,14 +1768,8 @@
  # BR2_PACKAGE_FCGIWRAP is not set
  # BR2_PACKAGE_FLANNEL is not set
  # BR2_PACKAGE_FPING is not set
@@ -2105,7 +2125,7 @@
  
  #
  # gupnp-tools needs libgtk3
-@@ -2192,22 +1771,13 @@
+@@ -2192,22 +1777,13 @@
  # BR2_PACKAGE_HANS is not set
  # BR2_PACKAGE_HIAWATHA is not set
  # BR2_PACKAGE_HOSTAPD is not set
@@ -2131,7 +2151,7 @@
  # BR2_PACKAGE_INADYN is not set
  # BR2_PACKAGE_IODINE is not set
  # BR2_PACKAGE_IPERF is not set
-@@ -2218,23 +1788,14 @@
+@@ -2218,23 +1794,14 @@
  # BR2_PACKAGE_IPTABLES is not set
  # BR2_PACKAGE_IPTRAF_NG is not set
  # BR2_PACKAGE_IPUTILS is not set
@@ -2158,7 +2178,7 @@
  # BR2_PACKAGE_LIGHTTPD is not set
  # BR2_PACKAGE_LINKNX is not set
  # BR2_PACKAGE_LINKS is not set
-@@ -2245,10 +1806,7 @@
+@@ -2245,10 +1812,7 @@
  # BR2_PACKAGE_MACCHANGER is not set
  # BR2_PACKAGE_MEMCACHED is not set
  # BR2_PACKAGE_MII_DIAG is not set
@@ -2170,7 +2190,7 @@
  # BR2_PACKAGE_MINISSDPD is not set
  # BR2_PACKAGE_MJPG_STREAMER is not set
  
-@@ -2256,22 +1814,13 @@
+@@ -2256,22 +1820,13 @@
  # modemmanager needs udev /dev management and a toolchain w/ wchar, threads
  #
  BR2_PACKAGE_MONGREL2_LIBC_SUPPORTS=y
@@ -2196,7 +2216,7 @@
  # BR2_PACKAGE_NCFTP is not set
  # BR2_PACKAGE_NDISC6 is not set
  # BR2_PACKAGE_NETATALK is not set
-@@ -2283,10 +1832,7 @@
+@@ -2283,10 +1838,7 @@
  # NetworkManager needs udev /dev management and a glibc toolchain w/ headers >= 3.7
  #
  # BR2_PACKAGE_NFACCT is not set
@@ -2208,7 +2228,7 @@
  # BR2_PACKAGE_NGINX is not set
  # BR2_PACKAGE_NGIRCD is not set
  # BR2_PACKAGE_NGREP is not set
-@@ -2306,10 +1852,7 @@
+@@ -2306,10 +1858,7 @@
  # BR2_PACKAGE_OPENVPN is not set
  # BR2_PACKAGE_P910ND is not set
  # BR2_PACKAGE_PHIDGETWEBSERVICE is not set
@@ -2220,7 +2240,7 @@
  # BR2_PACKAGE_POUND is not set
  # BR2_PACKAGE_PPPD is not set
  # BR2_PACKAGE_PPTP_LINUX is not set
-@@ -2330,15 +1873,9 @@
+@@ -2330,15 +1879,9 @@
  # BR2_PACKAGE_RPCBIND is not set
  # BR2_PACKAGE_RSH_REDONE is not set
  # BR2_PACKAGE_RSYNC is not set
@@ -2238,7 +2258,7 @@
  # BR2_PACKAGE_SCONESERVER is not set
  # BR2_PACKAGE_SER2NET is not set
  # BR2_PACKAGE_SHAIRPORT_SYNC is not set
-@@ -2346,10 +1883,7 @@
+@@ -2346,10 +1889,7 @@
  # BR2_PACKAGE_SMCROUTE is not set
  # BR2_PACKAGE_SOCAT is not set
  # BR2_PACKAGE_SOCKETCAND is not set
@@ -2250,7 +2270,7 @@
  # BR2_PACKAGE_SPAWN_FCGI is not set
  # BR2_PACKAGE_SPICE_PROTOCOL is not set
  # BR2_PACKAGE_SQUID is not set
-@@ -2370,32 +1904,17 @@
+@@ -2370,32 +1910,17 @@
  # BR2_PACKAGE_UDPCAST is not set
  # BR2_PACKAGE_ULOGD is not set
  # BR2_PACKAGE_USHARE is not set
@@ -2288,7 +2308,7 @@
  # BR2_PACKAGE_WPA_SUPPLICANT is not set
  # BR2_PACKAGE_WPAN_TOOLS is not set
  # BR2_PACKAGE_XINETD is not set
-@@ -2450,10 +1969,7 @@
+@@ -2450,10 +1975,7 @@
  #
  # -------------------------------------------------------
  #
@@ -2300,7 +2320,7 @@
  
  #
  # Real-Time
-@@ -2464,10 +1980,7 @@
+@@ -2464,10 +1986,7 @@
  #
  # Security
  #
@@ -2312,7 +2332,7 @@
  
  #
  # Shell and utilities
-@@ -2490,22 +2003,13 @@
+@@ -2490,22 +2009,13 @@
  # BR2_PACKAGE_GNUPG2 is not set
  # BR2_PACKAGE_INOTIFY_TOOLS is not set
  # BR2_PACKAGE_LOCKFILE_PROGS is not set
@@ -2338,7 +2358,7 @@
  # BR2_PACKAGE_XMLSTARLET is not set
  # BR2_PACKAGE_XXHASH is not set
  
-@@ -2519,15 +2023,9 @@
+@@ -2519,15 +2029,9 @@
  BR2_PACKAGE_AUDIT_ARCH_SUPPORTS=y
  # BR2_PACKAGE_AUDIT is not set
  # BR2_PACKAGE_CGROUPFS_MOUNT is not set
@@ -2356,7 +2376,7 @@
  # BR2_PACKAGE_DOCKER_ENGINE is not set
  
  #
-@@ -2542,32 +2040,20 @@
+@@ -2542,32 +2046,20 @@
  # BR2_PACKAGE_GETENT is not set
  # BR2_PACKAGE_HTOP is not set
  BR2_PACKAGE_INITSCRIPTS=y
@@ -2393,7 +2413,7 @@
  # BR2_PACKAGE_RUNC is not set
  # BR2_PACKAGE_SCRUB is not set
  # BR2_PACKAGE_SCRYPT is not set
-@@ -2579,30 +2065,21 @@
+@@ -2579,30 +2071,21 @@
  # BR2_PACKAGE_SWUPDATE is not set
  BR2_PACKAGE_SYSTEMD_ARCH_SUPPORTS=y
  # BR2_PACKAGE_TPM_TOOLS is not set
@@ -2430,7 +2450,7 @@
  # BR2_PACKAGE_UEMACS is not set
  
  #
-@@ -2610,7 +2087,14 @@
+@@ -2610,7 +2093,14 @@
  #
  # BR2_TARGET_ROOTFS_AXFS is not set
  # BR2_TARGET_ROOTFS_CLOOP is not set
@@ -2446,7 +2466,7 @@
  # BR2_TARGET_ROOTFS_CRAMFS is not set
  BR2_TARGET_ROOTFS_EXT2=y
  # BR2_TARGET_ROOTFS_EXT2_2r0 is not set
-@@ -2625,13 +2109,13 @@
+@@ -2625,13 +2115,13 @@
  BR2_TARGET_ROOTFS_EXT2_EXTRA_BLOCKS=0
  BR2_TARGET_ROOTFS_EXT2_EXTRA_INODES=0
  BR2_TARGET_ROOTFS_EXT2_RESBLKS=0
@@ -2463,7 +2483,7 @@
  # BR2_TARGET_ROOTFS_JFFS2 is not set
  # BR2_TARGET_ROOTFS_ROMFS is not set
  # BR2_TARGET_ROOTFS_SQUASHFS is not set
-@@ -2644,10 +2128,6 @@
+@@ -2644,10 +2134,6 @@
  #
  # BR2_TARGET_AFBOOT_STM32 is not set
  # BR2_TARGET_BAREBOX is not set
