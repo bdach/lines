@@ -166,6 +166,17 @@ def upload(folder):
         track.save(os.path.join(real_path, filename))
         return redirect(request.referrer)
 
+@app.route("/create_dir/", methods=["POST"])
+@app.route("/create_dir/<path:folder>", methods=["POST"])
+def create_dir(folder = ""):
+    if "dir_name" not in request.form:
+        return redirect(request.referrer)
+    name = request.form.get("dir_name")
+    fullpath = os.path.join(root_dir, folder, name)
+    if not os.path.isdir(fullpath):
+        os.mkdir(fullpath)
+    return redirect(request.referrer)
+
 def pause_button_callback(channel):
     if volume_button_on:
         jukebox.volume_up()
@@ -179,6 +190,7 @@ def skip_button_callback(channel):
         jukebox.skip()
 
 def volume_toggle_callback(channel):
+    global volume_button_on
     volume_button_on = not volume_button_on
 
 if __name__ == "__main__":

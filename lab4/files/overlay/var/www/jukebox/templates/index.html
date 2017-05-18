@@ -70,6 +70,19 @@
 							{% for dir in dirnames %}
 							<li class="collection-item"><a href="{{ url_for('.view_tracks', folder='/'.join([folder, dir])) }}">{{ dir }}</a></li>
 							{% endfor %}
+							<li class="collection-item">
+								<form class="row valign-wrapper" method="POST" action="{{ url_for('.create_dir', folder=folder) }}">
+									<div class="col s10 input-field">
+										<input placeholder="Directory name" id="dir_name" name="dir_name" type="text" class="validate" required />
+										<label for="dir_name">Directory name</label>
+									</div>
+									<div class="col s2">
+										<button class="btn-floating orange waves-effect waves-light right" type="submit">
+											<i class="material-icons">library_add</i>
+										</button>
+									</div>
+								</form>
+							</li>
 						</ul>
 					</div>
 
