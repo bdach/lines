@@ -1,0 +1,11 @@
+--- bcm2708-rpi-b.dts	2017-05-20 14:27:18.740595804 +0200
++++ bcm2708-rpi-b-audio.dts	2017-05-20 14:28:22.368671816 +0200
+@@ -489,7 +489,7 @@
+ 		audio {
+ 			compatible = "brcm,bcm2835-audio";
+ 			brcm,pwm-channels = <0x8>;
+-			status = "disabled";
++			status = "okay";
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <0x18>;
+ 			phandle = <0x21>;

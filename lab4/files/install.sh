@@ -29,3 +29,11 @@ cp -R overlay ${BR2_ROOT_PATH}/../ || exit $?
 
 echo "compiling image"
 make -C ${BR2_ROOT_PATH}
+
+echo "patching device tree"
+#"${BR2_ROOT_PATH}/build/host-dtc-1.4.1/dtc" -I dtb -O dts -o "bcm2708-rpi-b.dts" bcm2708-rpi-b.dts
+cp dts.patch ${BR2_ROOT_PATH}/output/images
+(cd ${BR2_ROOT_PATH}/output/images &&
+	"../build/host-dtc-1.4.1/dtc" -I dtb -O dts -o "bcm2708-rpi-b.dts" bcm2708-rpi-b.dtb &&
+	patch -N bcm2708-rpi-b.dts dts.patch;
+	"../build/host-dtc-1.4.1/dtc" -I dts -O dtb -o "bcm2708-rpi-b.dtb" bcm2708-rpi-b.dts) || exit $?

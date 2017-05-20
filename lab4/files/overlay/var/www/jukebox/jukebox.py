@@ -117,9 +117,11 @@ def get_filename(path):
         return None
     return os.path.splitext(os.path.basename(path))[0]
 
-@app.route("/play/<path:filename>")
-def play_file(filename):
-    queue.request(os.path.join(root_dir, filename))
+@app.route("/play//<path:filename>/")
+@app.route("/play/<path:directory>/<path:filename>/")
+def play_file(filename, directory=""):
+    print(os.path.join(root_dir, directory, filename))
+    queue.request(os.path.join(root_dir, directory, filename))
     jukebox.queue_updated()
     return redirect(request.referrer)
 
@@ -153,8 +155,9 @@ def volume_ctrl(direction):
         abort(404)
     return redirect(request.referrer)
 
+@app.route("/upload/", methods=["POST"])
 @app.route("/upload/<path:folder>", methods=["POST"])
-def upload(folder):
+def upload(folder = ""):
     real_path = os.path.join(root_dir, folder)
     if not os.path.isdir(real_path):
         abort(404)
@@ -203,5 +206,5 @@ if __name__ == "__main__":
     GPIO.add_event_detect(27, GPIO.BOTH, callback=volume_toggle_callback, bouncetime=200)
 
     atexit.register(GPIO.cleanup)
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=80)
 

@@ -1,0 +1,327 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{helvet}
+\usepackage{bera}
+\usepackage{hyperref}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[polish]{babel}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{menukeys}
+
+\renewcommand\familydefault{\sfdefault}
+
+\lstset{basicstyle=\ttfamily,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  stringstyle=\color{teal},
+  captionpos=b
+}
+
+\title{Linux w systemach wbudowanych -- Laboratorium 4}
+\author{Bartłomiej Dach}
+
+\newcommand{\centeredmenu}[1]{
+	\begin{center}
+		\menu{#1}
+	\end{center}
+}
+
+\lstdefinelanguage{javascript}{
+	keywords={typeof, new, true, false, catch, function, return, null, catch, switch, var, if, in, while, do, else, case, break},
+	ndkeywords={class, export, boolean, throw, implements, import, this},
+	sensitive=false,
+	comment=[l]{//},
+	morecomment=[s]{/*}{*/},
+	morestring=[b]',
+	morestring=[b]"
+}
+
+\lstdefinelanguage{diff}{
+	basicstyle=\ttfamily\small,
+	morecomment=[f][\color{blue}]{@@},
+	morecomment=[f][\color{teal}]{+},
+	morecomment=[f][\color{red}]{-},
+}
+
+\begin{document}
+
+\makeatletter
+\begin{flushright}
+	Warszawa, \@date
+\end{flushright}
+\begin{center}
+	\LARGE{\@title}
+\end{center}
+\vspace{0.25cm}
+Student: \@author
+\makeatother
+
+\section{Treść zadania}
+
+Celem zadania 4. było zrealizowanie przy pomocy płytki Raspberry Pi urządzenia, które jest
+wyposażone w interfejs użytkownika złożony z:
+
+\begin{itemize}
+	\item przycisków oraz diod LED, pozwalających na podstawową obsługę urządzenia,
+	\item interfejsu sieciowego lub WWW, udostępniających bardziej zaawansowane funkcje.
+\end{itemize}
+
+Wybranym przeze mnie tematem ćwiczenia było stworzenie szafy grającej odtwarzającej pliki
+w formacie MP3. Za pomocą interfejsu WWW użytkownicy wybierają znajdujące się na karcie SD
+utwory, które trafiają do kolejki odtwarzania. Mają oni również możliwość dodawania
+własnych folderów oraz przesyłania własnych plików muzycznych.
+
+Zarówno za pomocą interfejsu sieciowego, jak i przycisków, możliwa jest kontrola odtwarzania
+w postaci: pauzowania/wznawiania obecnego utworu, pomijania obecnie odtwarzanego utworu
+(po nim grany jest następny utwór w kolejce), oraz regulacji głośności odtwarzania.
+
+\section{Procedura odtworzenia projektu z załączonego archiwum}
+
+W folderze \directory{files} znajduje się skrypt instalacyjny o nazwie \directory{install.sh}.
+Po uruchomieniu go poleceniem
+\begin{lstlisting}[language=bash]
+$ ./install.sh ${BR2_PATH}
+\end{lstlisting}
+gdzie \texttt{BR2\_PATH} oznacza katalog główny Buildroota, skrypt ustawi konfigurację pakietów
+Buildroota, skopiuje pliki nakładki oraz rozpocznie proces kompilacji obrazu. Po zakończeniu
+kompilacji stosowana jest dodatkowo łatka do wygenerowanego przez Buildroot drzewa urządzeń.
+
+Na system docelowy należy skopiować drzewo urządzeń (\texttt{bcm2708-rpi-b.dtb}) oraz obraz
+systemu (\texttt{zImage}) z katalogu \texttt{output/images}.
+
+\section{Opis rozwiązania}
+
+\subsection{Konfiguracja obrazu}
+
+Na początku konfiguracji ustawiono standardowe opcje, zawarte w poradniku laboratoryjnym
+(ustawienia toolchaina, serwer lustrzany, TTY, opcje obrazu systemu).
+
+Na system plików dodana została nakładka, w celu dołączenia niezbędnych plików. W nakładce
+znajdują się: pliki serwera, skrypt uruchomieniowy szafy grającej oraz plik
+\texttt{/etc/inittab} zmodyfikowany tak, aby trzecia partycja karty SD była montowana pod
+katalog \texttt{/music} w systemie docelowym.
+
+Do systemu dodane zostały paczki:
+
+\begin{itemize}
+	\item ALSA -- do kontroli oraz obsługi urządzeń audio:
+		\centeredmenu{Target packages > Libraries > Audio/sound > \texttt{alsa-lib}}
+		\centeredmenu{Target packages > Audio and video applications > \texttt{alsa-utils}}
+	\item ffmpeg -- do dekodowania formatu MP3,
+		\centeredmenu{Target packages > Audio and video applications > \texttt{ffmpeg}}
+	\item vlc -- do właściwego odtwarzania plików,
+		\centeredmenu{Target packages > Audio and video applications > \texttt{vlc}}
+	\item interpreter języka Python,
+		\centeredmenu{Target packages > Interpreter languages and scripting > \texttt{python3}}
+	\item mikroframework Flask razem z automatycznie zaznaczonymi zależnościami,
+		\centeredmenu{Target packages > Interpreter languages and scripting > External python modules > \texttt{python-flask}}
+	\item biblioteka RPi.GPIO.
+		\centeredmenu{Target packages > Interpreter languages and scripting > External python modules > \texttt{python-rpi-gpio}}
+\end{itemize}
+
+\subsection{Modyfikacja drzewa urządzeń}
+
+Do powyższych opcji została dodatkowo dołączona również opcja
+\centeredmenu{Host utilities > host dtc}
+Jest ona używana do modyfikacji wygenerowanego przez Buildroot drzewa urządzeń tak, aby wspierane
+były urządzenia audio. W tym celu najpierw binarny plik \texttt{.dtb} należy zdekompilować
+poleceniem
+\begin{lstlisting}[language=bash]
+$ ${BR2_PATH}/output/build/host-dtc-1.4.1/dtc -I dtb -O dts
+	-o bcm2708-rpi-b.dts bcm2708-rpi-b.dtb
+\end{lstlisting}
+Poniżej znajduje się treść łaty umożliwiającej na włączenie dźwięku.
+\begin{lstlisting}[language=diff,caption=Łata włączająca wsparcie dla dźwięku]
+@@ -489,7 +489,7 @@
+ 		audio {
+ 			compatible = "brcm,bcm2835-audio";
+ 			brcm,pwm-channels = <0x8>;
+-			status = "disabled";
++			status = "okay";
+ 			pinctrl-names = "default";
+ 			pinctrl-0 = <0x18>;
+ 			phandle = <0x21>;
+\end{lstlisting}
+Po jej zastosowaniu obraz skompilowany został z powrotem poleceniem
+\begin{lstlisting}[language=bash]
+$ ${BR2_PATH}/output/build/host-dtc-1.4.1/dtc -I dts -O dtb
+	-o bcm2708-rpi-b.dtb bcm2708-rpi-b.dts
+\end{lstlisting}
+
+\subsection{Realizacja szafy grającej}
+
+Pliki aplikacji znajdują się w katalogu
+\directory{overlay/var/www/jukebox}
+w dołączonym archiwum.
+
+Aplikacja została zrealizowana za pomocą języka skryptowego Python oraz mikroframeworka Flask
+\cite{flask}, zawierającego wbudowany serwer HTTP i wsparcie dla szablonów HTML. Za odtwarzanie
+mediów odpowiedzialna jest aplikacja VLC oraz dostarczone przez autorów bindingi do języka
+Python \cite{vlc-bindings}. Strona używa także arkuszy stylów oraz skryptów JavaScript
+zawartych we frameworku Materialize \cite{materialize}.
+
+Właściwy kod serwera zawarty jest w pojedynczym pliku
+\directory{overlay/var/www/jukebox/jukebox.py}.
+
+Za kolejkowanie piosenek odpowiada klasa \texttt{JukeboxQueue}. Piosenki dodawane są do kolejki
+tylko, jeśli jeszcze w niej się nie znajdują; w przeciwnym wypadku są przesuwane w górę listy.
+W momencie zakończenia się jednej piosenki, następna brana jest ze szczytu kolejki.
+
+Klasa \texttt{VlcJukebox} jest odpowiedzialna za odtwarzanie plików multimedialnych. W momencie
+jej utworzenia tworzona jest instancja klasy \texttt{VlcInstance}, pozwalająca na odtwarzanie
+multimediów.
+
+\begin{lstlisting}[language=python,caption=Konstruktor klasy \texttt{VlcInstance}]
+class VlcJukebox:
+    def __init__(self, queue):
+        self.instance = vlc.Instance()
+        self.player = self.instance.media_player_new()
+        event_manager = self.player.event_manager()
+        event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, 
+		self.song_ended_callback)
+        self.queue = queue
+        self.queue_ended = True
+        self.current = None
+\end{lstlisting}
+
+Odpowiednie metody klasy służą do kontroli odtwarzania:
+
+\begin{itemize}
+	\item Metoda \texttt{new\_song} odpowiada za odtworzenie kolejnej piosenki z kolejki.
+	\item Metoda \texttt{queue\_updated} obsługuje zdarzenie dodania utworu do kolejki
+		odtwarzania, wznawiając odtwarzanie, jeśli kolejka skończyła się wcześniej.
+	\item Metoda \texttt{song\_ended\_callback} odtwarza kolejny utwór z kolejki
+		po zakończeniu poprzedniego (jeśli taki istnieje).
+	\item Metody \texttt{pause} i \texttt{skip} używane są do pauzowania oraz pomijania
+		utworów.
+	\item Metody \texttt{volume\_up} i \texttt{volume\_down} służą do kontroli głośności.
+\end{itemize}
+
+Funkcje zaadnotowane właściwością \texttt{@app.route} służą do obsługi poszczególnych
+żądań HTTP. Jedynym widokiem aplikacji jest widok obsługiwany przez funkcję
+\texttt{view\_tracks}, zawierający przeglądarkę plików. Do przeglądania poszczególnych
+katalogów używana jest funkcja \texttt{os.walk}. Pliki są filtrowane tak, aby wyświetlane były
+wyłącznie te z rozszerzeniem \texttt{.mp3}.
+
+\begin{lstlisting}[language=python,caption=Metoda obsługująca przeglądarkę plików]
+@app.route("/<path:folder>")
+@app.route("/")
+def view_tracks(folder=""):
+    real_path = os.path.join(root_dir, folder)
+    if not os.path.isdir(real_path):
+        abort(404)
+    root = None
+    if (len(folder) > 0):
+        root = os.path.abspath(os.path.join("/", folder, ".."))
+    for (dirpath, dirnames, filenames) in os.walk(real_path):
+        music_files = [filename for filename in filenames if is_mp3_file(filename)]
+        return render_template("index.html", 
+                folder=folder, 
+                dirnames=dirnames, 
+                filenames=music_files, 
+                queue=[get_filename(path) for path in queue.get_contents()],
+                root=root,
+                current=get_filename(jukebox.current),
+                icon=jukebox.play_button_icon())
+\end{lstlisting}
+
+Pozostałe metody odpowiadają za sterowanie odtwarzaczem z poziomu interfejsu WWW. Wszystkie
+z nich wykonują odpowiednie czynności na instancji \texttt{VlcJukebox}, a następnie
+przekierowują użytkownika na poprzednią stronę.
+
+\begin{itemize}
+	\item Dodanie pliku do kolejki (\texttt{play\_file}), pauza (\texttt{pause}),
+		pominięcie utworu (\texttt{skip}) i kontrola głośności (\texttt{volume\_ctrl})
+		są realizowane za pomocą zapytań GET.
+	\item Metody \texttt{update\_queue} i \texttt{now\_playing} są używane do dynamicznej
+		aktualizacji informacji wyświetlanych w interfejsie WWW. W źródle przeglądarki
+		plików znajduje się kod JavaScript, który za pomocą jQuery okresowo wysyła żądania
+		AJAX pod adresy \texttt{/now} i \texttt{/queue} i aktualizuje zawartość strony.
+		\begin{lstlisting}[language=javascript, caption=Aktualizacja kolejki i obecnego utworu z pomocą jQuery]
+function update() {
+	$.ajax({
+		url: "{{ url_for('.update_queue') }}",
+		cache: false
+	})
+	.done(function(html) {
+		$("#slide-out-contents").replaceWith(html)
+	});
+	$(".button-collapse").sideNav();
+
+	$.ajax({
+		url: "{{ url_for('.now_playing') }}",
+		cache: false
+	})
+	.done(function(html) {
+		$("#now-playing").replaceWith(html)
+	});
+}
+
+setInterval(update, 5000)
+		\end{lstlisting}
+	\item Metody \texttt{upload} oraz \texttt{create\_dir} odpowiadają za zarządzanie utworami, tj.
+		tworzenie katalogów i przesyłanie plików. Te czynności są wykonywane za pomocą żądań
+		POST. Przy przesyłaniu plików dodatkowo wykorzystywana jest część FILES żądania.
+\end{itemize}
+
+Pozostałe trzy funkcje odpowiedzialne są za obsługę przycisków na dołączonej płytce. Ich obsługa
+zrealizowana jest za pomocą biblioteki RPi.GPIO \cite{rpi-gpio}.
+
+\begin{itemize}
+	\item Pierwszy przycisk (pin 10) odpowiada za pauzowanie i wznawianie odtwarzania.
+	\item Drugi przycisk (pin 22) odpowiada za pomijanie utworów.
+	\item Trzeci przycisk (pin 27) służy jako modyfikator. Po przytrzymaniu go, przyciski 10 i 22
+		służą do kontroli głośności odtwarzania. Ta funkcjonalność zrealizowana jest poprzez
+		zarejestrowanie się na zdarzenie zmiany zbocza (w obie strony) i przełączanie
+		globalnej flagi, oznaczającej aktywny tryb.
+\end{itemize}
+
+\begin{lstlisting}[language=python, caption=Rejestracja funkcji obsługujących wciśnięcia]
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(10, GPIO.IN)
+GPIO.add_event_detect(10, GPIO.FALLING, callback=pause_button_callback, bouncetime=200)
+GPIO.setup(22, GPIO.IN)
+GPIO.add_event_detect(22, GPIO.FALLING, callback=skip_button_callback, bouncetime=200)
+GPIO.setup(27, GPIO.IN)
+GPIO.add_event_detect(27, GPIO.BOTH, callback=volume_toggle_callback, bouncetime=200)
+
+atexit.register(GPIO.cleanup)
+\end{lstlisting}
+
+Uruchomienie serwera odbywa się w głównej części skryptu, poprzez wywołanie funkcji
+\begin{lstlisting}
+app.run(host='0.0.0.0', port=80)
+\end{lstlisting}
+
+\begin{thebibliography}{9}
+
+\bibitem{flask}
+	Flask: A Python Microframework,
+		\url{http://flask.pocoo.org/},
+		BSD
+
+\bibitem{materialize}
+	Materialize CSS,
+		\url{http://materializecss.com/},
+		MIT
+
+\bibitem{rpi-gpio}
+	raspberry-gpio-python,
+		SourceForge,
+		\url{https://sourceforge.net/projects/raspberry-gpio-python/},
+		MIT
+
+\bibitem{vlc-bindings}
+	Python bindings,
+		VideoLAN Wiki,
+		\url{https://wiki.videolan.org/python_bindings},
+		GNU LGPL
+
+\end{thebibliography}
+
+\end{document}
