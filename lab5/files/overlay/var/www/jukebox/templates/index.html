@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='css/materialize.min.css') }}"  media="screen,projection"/>
+
+		<style>
+		footer {
+			width: 100%;
+			position: fixed;
+			left: 0px;
+			bottom: 0px;
+			z-index: 10 !important;
+		}
+		
+		main {
+			margin-bottom: 250px;
+		}
+
+		header, main, footer {
+			padding-left: 300px;
+		}
+
+		.side-nav li > a {
+			height: auto;
+			padding: 8px 32px;
+			line-height: 24px;
+			font-weight: normal;
+		}
+		
+		@media only screen and (max-width : 992px) {
+			header, main, footer {
+				padding-left: 0;
+			}
+		}
+		</style>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>MP3 Jukebox</title>
+	</head>
+	<body>
+		<header>
+			<nav>
+				<div class="nav-wrapper indigo">
+					<div class="container">
+						<a href="#" data-activates="slide-out" class="button-collapse"><i class="material-icons">menu</i></a>
+						<a href="{{ url_for('.view_tracks') }}" class="brand-logo">MP3 Jukebox</a>
+						<a class="right">{{ folder }}</a>
+					</div>
+				</div>
+			</nav>
+		</header>
+		<ul id="slide-out" class="side-nav fixed">
+			{% include 'queue.html' %}
+		</ul>
+		<main>
+			<div class="container">
+				<div class="row">
+					<div class="col s12 m6">
+						<ul class="collection with-header">
+							<li class="collection-header"><h5>Available directories</h5></li>
+							{% if root %}
+							<li class="collection-item"><a href="{{ url_for('.view_tracks', folder=root) }}">Go back</a></li>
+							{% endif %}
+							{% for dir in dirnames %}
+							<li class="collection-item"><a href="{{ url_for('.view_tracks', folder='/'.join([folder, dir])) }}">{{ dir }}</a></li>
+							{% endfor %}
+							<li class="collection-item">
+								<form class="row valign-wrapper" method="POST" action="{{ url_for('.create_dir', folder=folder) }}">
+									<div class="col s10 input-field">
+										<input placeholder="Directory name" id="dir_name" name="dir_name" type="text" class="validate" required />
+										<label for="dir_name">Directory name</label>
+									</div>
+									<div class="col s2">
+										<button class="btn-floating orange waves-effect waves-light right" type="submit">
+											<i class="material-icons">library_add</i>
+										</button>
+									</div>
+								</form>
+							</li>
+						</ul>
+					</div>
+
+					<div class="col s12 m6">
+						<ul class="collection with-header">
+							<li class="collection-header"><h5>Tracks</h5></li>
+							{% for file in filenames %}
+							<li class="collection-item"><a href="{{ url_for('.play_file', directory=folder, filename=file) }}">
+									<div>{{ file }} <i class="material-icons orange-text secondary-content">playlist_add</i></div>
+							</a></li>
+							{% endfor %}
+							<li class="collection-item">
+								<form class="row valign-wrapper" method="POST" enctype="multipart/form-data" action="{{ url_for('.upload', folder=folder) }}">
+									<div class="col s10">
+										<div class="file-field input-field">
+											<div class="btn orange">
+												<span>File</span>
+												<input type="file" name="track">
+											</div>
+											<div class="file-path-wrapper">
+												<input class="file-path validate" type="text" required>
+											</div>
+										</div>
+									</div>
+									<div class="col s2">
+										<button class="btn-floating orange waves-effect waves-light right" type="submit">
+											<i class="material-icons">send</i>
+										</button>
+									</div>
+								</form>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</main>
+		<footer class="page-footer indigo">
+			<div class="container">
+				<div class="row">
+					{% include 'now.html' %}
+				</div>
+				<div class="row">
+					<div class="col s12 center">
+						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.volume_ctrl', direction='down') }}">
+							<i class="material-icons white-text">volume_down</i>
+						</a>
+						<a class="btn-floating btn-large waves-effect waves-light orange" href="{{ url_for('.pause') }}">
+							<i class="material-icons">{{ icon }}</i>
+						</a>
+						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.skip') }}">
+							<i class="material-icons white-text">skip_next</i>
+						</a>
+						<a class="btn-floating indigo waves-effect waves-orange" href="{{ url_for('.volume_ctrl', direction='up') }}">
+							<i class="material-icons white-text">volume_up</i>
+						</a>
+					</div>
+				</div>
+			</div>
+		</footer>
+
+<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
+<script type="text/javascript">
+$(".button-collapse").sideNav();
+function update() {
+	$.ajax({
+		url: "{{ url_for('.update_queue') }}",
+		cache: false
+	})
+	.done(function(html) {
+		$("#slide-out-contents").replaceWith(html)
+	});
+	$(".button-collapse").sideNav();
+
+	$.ajax({
+		url: "{{ url_for('.now_playing') }}",
+		cache: false
+	})
+	.done(function(html) {
+		$("#now-playing").replaceWith(html)
+	});
+}
+
+setInterval(update, 5000)
+</script>
+	</body>
+</html>

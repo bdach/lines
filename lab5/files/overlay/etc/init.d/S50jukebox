@@ -1,0 +1,9 @@
+#!/bin/sh
+case $1 in
+	start)
+		modprobe snd_bcm2835 && python3 /var/www/jukebox/jukebox.py > /var/log/jukebox 2>&1 &
+		;;
+	stop)
+		killall python
+		;;
+esac

@@ -1,0 +1,90 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{helvet}
+\usepackage{bera}
+\usepackage{hyperref}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[polish]{babel}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{menukeys}
+
+\renewcommand\familydefault{\sfdefault}
+
+\lstset{basicstyle=\ttfamily,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  stringstyle=\color{teal},
+  captionpos=b
+}
+
+\title{Linux w systemach wbudowanych -- Laboratorium 5}
+\author{Bartłomiej Dach}
+
+\newcommand{\centeredmenu}[1]{
+	\begin{center}
+		\menu{#1}
+	\end{center}
+}
+
+\lstdefinelanguage{javascript}{
+	keywords={typeof, new, true, false, catch, function, return, null, catch, switch, var, if, in, while, do, else, case, break},
+	ndkeywords={class, export, boolean, throw, implements, import, this},
+	sensitive=false,
+	comment=[l]{//},
+	morecomment=[s]{/*}{*/},
+	morestring=[b]',
+	morestring=[b]"
+}
+
+\lstdefinelanguage{diff}{
+	basicstyle=\ttfamily\small,
+	morecomment=[f][\color{blue}]{@@},
+	morecomment=[f][\color{teal}]{+},
+	morecomment=[f][\color{red}]{-},
+}
+
+\begin{document}
+
+\makeatletter
+\begin{flushright}
+	Warszawa, \@date
+\end{flushright}
+\begin{center}
+	\LARGE{\@title}
+\end{center}
+\vspace{0.25cm}
+Student: \@author
+\makeatother
+
+\section{Treść zadania}
+
+\section{Procedura odtworzenia projektu z załączonego archiwum}
+
+\section{Opis rozwiązania}
+
+\begin{thebibliography}{9}
+
+\bibitem{flask}
+	Flask: A Python Microframework,
+		\url{http://flask.pocoo.org/},
+		BSD
+
+\bibitem{materialize}
+	Materialize CSS,
+		\url{http://materializecss.com/},
+		MIT
+
+\bibitem{rpi-gpio}
+	raspberry-gpio-python,
+		SourceForge,
+		\url{https://sourceforge.net/projects/raspberry-gpio-python/},
+		MIT
+
+\end{thebibliography}
+
+\end{document}
