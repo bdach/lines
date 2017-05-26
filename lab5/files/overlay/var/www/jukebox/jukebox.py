@@ -5,11 +5,14 @@ import atexit
 import os
 import mpd
 
-import RPi.GPIO as GPIO
+import threading
+import time
+import gpio
 
 app = Flask(__name__)
 root_dir = "/media/dachb/My ZEN"
 volume_button_on = False
+running = True
 
 class MpcJukebox:
     song_ids = {}
@@ -178,16 +181,56 @@ def volume_toggle_callback(channel):
     global volume_button_on
     volume_button_on = not volume_button_on
 
-if __name__ == "__main__":
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(10, GPIO.IN)
-    GPIO.add_event_detect(10, GPIO.FALLING, callback=pause_button_callback, bouncetime=200)
-    GPIO.setup(22, GPIO.IN)
-    GPIO.add_event_detect(22, GPIO.FALLING, callback=skip_button_callback, bouncetime=200)
-    GPIO.setup(27, GPIO.IN)
-    GPIO.add_event_detect(27, GPIO.BOTH, callback=volume_toggle_callback, bouncetime=200)
+class GPIOPin:
+    previous_state = True
 
-    atexit.register(GPIO.cleanup)
+    def __init__(self, pin, edge, callback):
+        self.pin = pin
+        self.edge = edge
+        self.callback = callback
+
+    def read(self):
+        state = gpio.read(self.pin)
+        falling = False
+        rising = False
+        if previous_state and not state:
+            falling = True
+        if not previous_state and state:
+            rising = True
+        if self.edge == "RISING":
+            if rising:
+                self.callback()
+        elif self.edge == "FALLING":
+            if falling:
+                self.callback()
+        else:
+            if rising or falling:
+                self.callback()
+        self.previous_state = state
+
+def cleanup():
+    for pin in [10, 22, 27]:
+        gpio.cleanup(pin)
+
+def read_pins(pins, polltime):
+    global running
+    while running:
+        for pin in pins:
+            pin.read()
+        time.sleep(polltime)
+
+if __name__ == "__main__":
+    for pin in [10, 22, 27]:
+        gpio.setup(pin, GPIO.IN)
+    pins = []
+    pins.append(GPIOPin(10, "FALLING", pause_button_callback))
+    pins.append(GPIOPin(22, "FALLING", skip_button_callback))
+    pins.append(GPIOPin(27, "BOTH", volume_toggle_callback))
+
+    thread = threading.Thread(target = lambda: read_pins(pins, 100))
+    thread.daemon = True
+    thread.start()
+
+    atexit.register(gpio.cleanup)
     atexit.register(jukebox.close)
     app.run(host='0.0.0.0', port=8000)
-
