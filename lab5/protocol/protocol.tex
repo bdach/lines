@@ -63,27 +63,123 @@ Student: \@author
 
 \section{Treść zadania}
 
+Celem piątego zadania laboratoryjnego było przeniesienie rozwiązania zadania 4. zrealizowanego
+za pomocą platformy Buildroot na jedną z konkurencyjnych platform, takich, jak OpenWrt
+\cite{openwrt}, LEDE Project \cite{lede} czy Yocto Project \cite{yocto}.
+
+W ramach zadania 4. zrealizowałem szafę grającą odtwarzającą pliki MP3, sterowaną za pomocą
+interfejsów: sieciowego oraz przycisków na dołączonej płytce. Rozwiązanie to zostanie przeniesione
+w zadaniu 5. na system dostarczony przez LEDE Project.
+
 \section{Procedura odtworzenia projektu z załączonego archiwum}
+
+% też jeszcze nie wiem
 
 \section{Opis rozwiązania}
 
+\subsection{Instalacja prekompilowanego obrazu LEDE Project}
+
+% nie wiem
+
+\subsection{Zmiany w aplikacji}
+
+Pierwotna aplikacja do odtwarzania muzyki używała programu VLC media player oraz dostarczonych
+przez jego twórców bindingów do języka Python. Z racji braku VLC w liście paczek LEDE Project
+zastosowany został Music Player Daemon \cite{mpd} łącznie z bindingami do Pythona w postaci
+modułu python-mpd2 \cite{python-mpd2}.
+
+Obsługa przycisków za pomocą biblioteki RPi.GPIO okazała się niemożliwa do wykonania
+na prekompilowanym obrazie z racji braku m.in. aplikacji \texttt{ccache} lub jej alternatywy
+w postaci kompilatora \texttt{gcc}, nagłówków deweloperskich Pythona 3 oraz braku plików
+specjalnych \texttt{/dev/mem}. W związku z tymi problemami obsługa przycisków została zrealizowana
+za pośrednictwem interfejsu \texttt{sysfs} przy pomocy biblioteki \texttt{gpio} \cite{gpio}.
+
+\subsection{Konfiguracja systemu}
+
+Po zainstalowaniu gotowego obrazu na karcie SD i restarcie systemu prekompilowany system Linux
+jest gotowy do użycia. Na początku, w celu umożliwienia komunikacji za pośrednictwem wbudowanego
+serwera SSH oraz korzystania z menedżera pakietów \texttt{opkg} zmodyfikowane zostały ustawienia
+sieci tak, aby włączyć protokół DHCP w celu uzyskania adresu IP:
+
+\begin{lstlisting}[caption=Włączanie klienta DHCP na interfejsie \texttt{lan}]
+# uci set network.lan.proto=dhcp
+# uci commit
+# /etc/init.d/network restart
+\end{lstlisting}
+
+Po ustanowieniu połączenia przystąpiono do instalacji zależności przenoszonej aplikacji po
+uprzednim zaktualizowaniu listy zależności poleceniem \texttt{opkg update}:
+
+\begin{enumerate}
+	\item Python 3: \texttt{opkg install python3},
+	\item Menedżer modułów Pythona -- \texttt{pip}: \texttt{opkg install python3-pip},
+	\item Z bliżej nieokreślonych powodów konieczna po instalacji programu \texttt{pip3}
+		była również aktualizacja zestawu narzędzi \texttt{setuptools} poleceniem
+\begin{lstlisting}
+# pip3 install --upgrade setuptools
+\end{lstlisting}
+	\item Instalacja modułów Pythona używanych w aplikacji:
+\begin{lstlisting}
+# pip3 install flask
+# pip3 install gpio
+# pip3 install python-mpd2
+\end{lstlisting}
+	\item Instalacja serwera oraz klienta \texttt{mpd}:
+\begin{lstlisting}
+# opkg install mpc
+# opkg install mpd-mini
+\end{lstlisting}
+		W przypadku korzystania z wersji migawkowej (ang. \texttt{snapshot}) systemu, aby
+		dodać ten pakiet, konieczne było dodanie kanału (ang. \texttt{feed})
+\begin{lstlisting}
+src/gz release-packages 
+	http://downloads.lede-project.org/releases/
+	17.01.1/packages/arm_arm1176jzf-s_vfp/packages
+\end{lstlisting}
+		do listy kanałów, z których pobierane są informacje o paczkach.
+\end{enumerate}
+
+% overlay???
+
 \begin{thebibliography}{9}
 
-\bibitem{flask}
-	Flask: A Python Microframework,
+	\bibitem{flask}
+		Flask: A Python Microframework,
 		\url{http://flask.pocoo.org/},
 		BSD
 
-\bibitem{materialize}
-	Materialize CSS,
+	\bibitem{gpio}
+		gpio,
+		GitHub,
+		\url{https://github.com/vitiral/gpio}
+
+	\bibitem{lede}
+		LEDE project,
+		\url{https://lede-project.org/}
+
+	\bibitem{materialize}
+		Materialize CSS,
 		\url{http://materializecss.com/},
 		MIT
 
-\bibitem{rpi-gpio}
-	raspberry-gpio-python,
-		SourceForge,
-		\url{https://sourceforge.net/projects/raspberry-gpio-python/},
-		MIT
+	\bibitem{mpd}
+		Music Player Daemon,
+		\url{https://www.musicpd.org/},
+		GPL
+
+	\bibitem{openwrt}
+		OpenWrt,
+		\url{https://openwrt.org/}
+	
+	\bibitem{python-mpd2}
+		python-mpd2
+		GitHub,
+		\url{https://github.com/Mic92/python-mpd2},
+		LGPL-3.0
+
+	\bibitem{yocto}
+		Yocto Project,
+		\url{https://www.yoctoproject.org/}
 
 \end{thebibliography}
 
