@@ -73,7 +73,21 @@ w zadaniu 5. na system dostarczony przez LEDE Project.
 
 \section{Procedura odtworzenia projektu z załączonego archiwum}
 
-% też jeszcze nie wiem
+Do odtworzenia projektu wymagana jest istniejąca instalacja dystrybucji LEDE Project na płytce,
+najlepiej w wersji 17.01.1, ze skonfigurowanym łączem internetowym i dostępem do systemu plików
+poprzez SSH.
+
+W celu zainstalowania aplikacji, należy za pomocą programu \texttt{scp} przenieść folder
+\texttt{files} zawarty w archiwum z plikami na płytkę. W folderze tym znajduje się skrypt powłoki
+o nazwie \texttt{install.sh}, który uruchomiony rozpocznie proces instalacji zależności aplikacji,
+a następnie przygotuje pliki konfiguracyjne oraz środowisko uruchomieniowe.
+
+Po zakończeniu skryptu, aplikacja znajdzie się w folderze \texttt{/jukebox} w głównym katalogu
+systemu plików. W celu jej uruchomienia należy wykonać polecenie
+
+\begin{lstlisting}
+# python3 /jukebox/jukebox.py
+\end{lstlisting}
 
 \section{Opis rozwiązania}
 
@@ -87,29 +101,29 @@ obraz w wersji stabilnej 17.01.1, znajdujący się pod następującym adresem:
 
 Pobrany obraz po rozpakowaniu instalowany jest na płytce za pomocą polecenia
 
-% nie wiem czy ten device jest ok
 \begin{lstlisting}
 # ssh dachb@192.168.143.xxx "cat image.gz" | gunzip -c \
 | dd of=/dev/mmcblk0 bs=4M
 \end{lstlisting}
 
-która zapisuje zawartość obrazu na drugą partycję karty.
+gdzie adres IP jest adresem maszyny laboratoryjnej. Wykonanie tego polecenia powoduje zapisanie
+zawartości obrazu na karcie SD.
 
-Czynności te wystarczają, aby uzyskać działający system, lecz nie wykorzystuje on pełnego rozmiaru
+Czynności te wystarczają, aby uzyskać działający system, lecz nie wykorzystuje ów pełnego rozmiaru
 karty. W celu skorygowania tego faktu, można użyć narzędzi \texttt{fdisk} oraz \texttt{resize2fs},
-aby usunąć stworzoną partycję, stworzyć ją ponownie oraz zmienić jej rozmiar. Na ostatnich dwóch
-etapach należy pamiętać o sprawdzeniu integralności systemu plików poleceniem \texttt{e2fsck}.
+aby usunąć stworzoną partycję, stworzyć ją ponownie oraz zmienić jej rozmiar. Wykonując te czynności
+należy pamiętać o sprawdzaniu integralności systemu plików poleceniem \texttt{e2fsck}.
 
 \subsection{Zmiany w aplikacji}
 
 Pierwotna aplikacja do odtwarzania muzyki używała programu VLC media player oraz dostarczonych
 przez jego twórców bindingów do języka Python. Z racji braku VLC w liście paczek LEDE Project
 zastosowany został Music Player Daemon \cite{mpd} łącznie z bindingami do Pythona w postaci
-modułu python-mpd2 \cite{python-mpd2}.
+modułu \texttt{python-mpd2} \cite{python-mpd2}.
 
 Obsługa przycisków za pomocą biblioteki RPi.GPIO okazała się niemożliwa do wykonania
 na prekompilowanym obrazie z racji braku m.in. narzędzia \texttt{ccache} lub jego alternatywy
-w postaci kompilatora \texttt{gcc}, nagłówków deweloperskich Pythona 3 oraz braku plików
+w postaci kompilatora \texttt{gcc}, nagłówków deweloperskich Pythona 3 oraz braku obsługi plików
 specjalnych \texttt{/dev/mem}. W związku z tymi problemami obsługa przycisków została zrealizowana
 za pośrednictwem interfejsu \texttt{sysfs} przy pomocy biblioteki \texttt{gpio} \cite{gpio}.
 Rejestrowanie wywołań zwrotnych (ang. \emph{callback}) zostało zastąpione odpytywaniem stanu
@@ -159,8 +173,6 @@ src/gz release-packages
 \end{lstlisting}
 		do listy kanałów, z których pobierane są informacje o paczkach.
 \end{enumerate}
-
-% overlay???
 
 \begin{thebibliography}{9}
 
