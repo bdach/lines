@@ -165,19 +165,19 @@ def create_dir(folder = ""):
         os.mkdir(fullpath)
     return redirect(request.referrer)
 
-def pause_button_callback(channel):
+def pause_button_callback():
     if volume_button_on:
         jukebox.volume_up()
     else:
         jukebox.pause()
 
-def skip_button_callback(channel):
+def skip_button_callback():
     if volume_button_on:
         jukebox.volume_down()
     else:
         jukebox.skip()
 
-def volume_toggle_callback(channel):
+def volume_toggle_callback():
     global volume_button_on
     volume_button_on = not volume_button_on
 
@@ -193,9 +193,9 @@ class GPIOPin:
         state = gpio.read(self.pin)
         falling = False
         rising = False
-        if previous_state and not state:
+        if self.previous_state and not state:
             falling = True
-        if not previous_state and state:
+        if not self.previous_state and state:
             rising = True
         if self.edge == "RISING":
             if rising:
@@ -220,14 +220,20 @@ def read_pins(pins, polltime):
         time.sleep(polltime)
 
 if __name__ == "__main__":
-    for pin in [10, 22, 27]:
-        gpio.setup(pin, GPIO.IN)
+    pin_no = [10, 22, 27]                                
+    for pin in pin_no:
+        gpio.setup(pin, gpio.IN)
+
+    def cleanup():                                         
+        for pin in pin_no:                         
+            gpio.cleanup(pin)
+
     pins = []
     pins.append(GPIOPin(10, "FALLING", pause_button_callback))
     pins.append(GPIOPin(22, "FALLING", skip_button_callback))
     pins.append(GPIOPin(27, "BOTH", volume_toggle_callback))
 
-    thread = threading.Thread(target = lambda: read_pins(pins, 100))
+    thread = threading.Thread(target = lambda: read_pins(pins, 0.1))
     thread.daemon = True
     thread.start()
 

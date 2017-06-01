@@ -85,12 +85,12 @@ obraz w wersji stabilnej 17.01.1, znajdujący się pod następującym adresem:
 
 \url{https://downloads.lede-project.org/releases/17.01.1/targets/brcm2708/bcm2708/}
 
-Pobrany obraz po rozpakowaniu instalowany jest na płytce za pomocą systemu ratunkowego. Po
-wykonaniu transferu obrazu przez SSH wykonana została komenda
+Pobrany obraz po rozpakowaniu instalowany jest na płytce za pomocą polecenia
 
 % nie wiem czy ten device jest ok
 \begin{lstlisting}
-# dd if=rpi-ext4-sdcard.img.gz of=/dev/mmcblk0p2 bs=2M
+# ssh dachb@192.168.143.xxx "cat image.gz" | gunzip -c \
+| dd of=/dev/mmcblk0 bs=4M
 \end{lstlisting}
 
 która zapisuje zawartość obrazu na drugą partycję karty.
