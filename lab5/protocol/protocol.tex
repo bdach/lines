@@ -79,7 +79,26 @@ w zadaniu 5. na system dostarczony przez LEDE Project.
 
 \subsection{Instalacja prekompilowanego obrazu LEDE Project}
 
-% nie wiem
+Do uruchomienia aplikacji na płytce nie jest wymagane tworzenie własnego obrazu -- możliwe jest
+skorzystanie z prekompilowanego obrazu przygotowanego przez twórców LEDE project. Wybrany został
+obraz w wersji stabilnej 17.01.1, znajdujący się pod następującym adresem:
+
+\url{https://downloads.lede-project.org/releases/17.01.1/targets/brcm2708/bcm2708/}
+
+Pobrany obraz po rozpakowaniu instalowany jest na płytce za pomocą systemu ratunkowego. Po
+wykonaniu transferu obrazu przez SSH wykonana została komenda
+
+% nie wiem czy ten device jest ok
+\begin{lstlisting}
+# dd if=rpi-ext4-sdcard.img.gz of=/dev/mmcblk0p2 bs=2M
+\end{lstlisting}
+
+która zapisuje zawartość obrazu na drugą partycję karty.
+
+Czynności te wystarczają, aby uzyskać działający system, lecz nie wykorzystuje on pełnego rozmiaru
+karty. W celu skorygowania tego faktu, można użyć narzędzi \texttt{fdisk} oraz \texttt{resize2fs},
+aby usunąć stworzoną partycję, stworzyć ją ponownie oraz zmienić jej rozmiar. Na ostatnich dwóch
+etapach należy pamiętać o sprawdzeniu integralności systemu plików poleceniem \texttt{e2fsck}.
 
 \subsection{Zmiany w aplikacji}
 
@@ -89,10 +108,12 @@ zastosowany został Music Player Daemon \cite{mpd} łącznie z bindingami do Pyt
 modułu python-mpd2 \cite{python-mpd2}.
 
 Obsługa przycisków za pomocą biblioteki RPi.GPIO okazała się niemożliwa do wykonania
-na prekompilowanym obrazie z racji braku m.in. aplikacji \texttt{ccache} lub jej alternatywy
+na prekompilowanym obrazie z racji braku m.in. narzędzia \texttt{ccache} lub jego alternatywy
 w postaci kompilatora \texttt{gcc}, nagłówków deweloperskich Pythona 3 oraz braku plików
 specjalnych \texttt{/dev/mem}. W związku z tymi problemami obsługa przycisków została zrealizowana
 za pośrednictwem interfejsu \texttt{sysfs} przy pomocy biblioteki \texttt{gpio} \cite{gpio}.
+Rejestrowanie wywołań zwrotnych (ang. \emph{callback}) zostało zastąpione odpytywaniem stanu
+odpowiednich wyprowadzeń co 100 ms na osobnym wątku.
 
 \subsection{Konfiguracja systemu}
 
