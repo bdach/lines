@@ -122,9 +122,9 @@ zastosowany został Music Player Daemon \cite{mpd} łącznie z bindingami do Pyt
 modułu \texttt{python-mpd2} \cite{python-mpd2}.
 
 Obsługa przycisków za pomocą biblioteki RPi.GPIO okazała się niemożliwa do wykonania
-na prekompilowanym obrazie z racji braku m.in. narzędzia \texttt{ccache} lub jego alternatywy
-w postaci kompilatora \texttt{gcc}, nagłówków deweloperskich Pythona 3 oraz braku obsługi plików
-specjalnych \texttt{/dev/mem}. W związku z tymi problemami obsługa przycisków została zrealizowana
+na prekompilowanym obrazie z racji braku m.in. konieczności instalacji
+kompilatora \texttt{gcc}, nagłówków deweloperskich Pythona 3 oraz braku obsługi pliku specjalneg
+\texttt{/dev/mem} przez jądro. W związku z tymi problemami obsługa przycisków została zrealizowana
 za pośrednictwem interfejsu \texttt{sysfs} przy pomocy biblioteki \texttt{gpio} \cite{gpio}.
 Rejestrowanie wywołań zwrotnych (ang. \emph{callback}) zostało zastąpione odpytywaniem stanu
 odpowiednich wyprowadzeń co 100 ms na osobnym wątku.
@@ -173,6 +173,8 @@ src/gz release-packages
 \end{lstlisting}
 		do listy kanałów, z których pobierane są informacje o paczkach.
 \end{enumerate}
+
+Tak skonfigurowany system zawiera już wszystkie zależności niezbędne do uruchomienia aplikacji.
 
 \begin{thebibliography}{9}
 
